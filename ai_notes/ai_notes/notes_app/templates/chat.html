@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat with PDF</title>
+</head>
+<body>
+
+<h2>Ask Questions from PDF</h2>
+
+<form method="POST">
+    {% csrf_token %}
+    <input type="text" name="query" placeholder="Ask something..." required>
+    <button type="submit">Ask</button>
+</form>
+
+{% if query %}
+    <h3>Question:</h3>
+    <p>{{ query }}</p>
+
+    <h3>Answer:</h3>
+    <p>{{ answer }}</p>
+{% endif %}
+
+{% if error %}
+    <p style="color:red;">{{ error }}</p>
+{% endif %}
+
+<a href="/">Upload New PDF</a>
+
+</body>
+</html>

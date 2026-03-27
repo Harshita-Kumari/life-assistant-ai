@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI PDF Chat</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            height: 100vh;
+            background: #343541;
+            color: white;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: #202123;
+            padding: 20px;
+        }
+
+        .upload-box input {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .upload-box button {
+            width: 100%;
+            padding: 10px;
+            background: #19c37d;
+            border: none;
+            border-radius: 6px;
+            color: white;
+        }
+
+        .notes {
+            margin-top: 20px;
+            max-height: 250px;
+            overflow-y: auto;
+            background: #2a2b32;
+            padding: 10px;
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 15px;
+            background: #444654;
+            text-align: center;
+        }
+
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .chat-row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .user-row {
+            justify-content: flex-end;
+        }
+
+        .message {
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 60%;
+        }
+
+        .user {
+            background: #0b93f6;
+        }
+
+        .ai {
+            background: #444654;
+        }
+
+        .input-area {
+            padding: 10px;
+            background: #40414f;
+        }
+
+        .input-box {
+            display: flex;
+            background: #555;
+            border-radius: 20px;
+            padding: 5px;
+        }
+
+        .input-box input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: white;
+            padding: 10px;
+        }
+
+        .input-box button {
+            background: #19c37d;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            color: white;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 6px;
+            background: white;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+
+    <h3>Upload PDFs</h3>
+
+    <form method="POST" enctype="multipart/form-data" class="upload-box">
+        {% csrf_token %}
+        <input type="file" name="pdfs" multiple>
+        <button type="submit" name="upload_btn">Upload</button>
+    </form>
+
+    <button onclick="clearChat()">Clear Chat</button>
+
+    <h4>Notes</h4>
+    <div class="notes">
+        <pre>{{ notes }}</pre>
+    </div>
+
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+    <div class="header">AI PDF Assistant</div>
+
+    <div class="chat-area" id="chatArea">
+
+        {% for chat in chat_history %}
+            <div class="chat-row user-row">
+                <div class="message user">{{ chat.question }}</div>
+            </div>
+
+            <div class="chat-row">
+                <div class="message ai">{{ chat.answer }}</div>
+            </div>
+        {% endfor %}
+
+    </div>
+
+    <div class="input-area">
+        <div class="input-box">
+            <input type="text" id="queryInput" placeholder="Ask something...">
+            <button onclick="sendMessage()">➤</button>
+        </div>
+    </div>
+
+</div>
+
+<!-- Hidden CSRF -->
+<form style="display:none;">{% csrf_token %}</form>
+
+<!-- SCRIPT -->
+<script>
+
+function appendMessage(text, type) {
+    const chatArea = document.getElementById("chatArea");
+
+    let row = document.createElement("div");
+    row.className = "chat-row";
+
+    if (type === "user") {
+        row.classList.add("user-row");
+        row.innerHTML = `<div class="message user">${text}</div>`;
+    } else {
+        row.innerHTML = `<div class="message ai"></div>`;
+    }
+
+    chatArea.appendChild(row);
+    chatArea.scrollTop = chatArea.scrollHeight;
+
+    return row;
+}
+
+function typeEffect(element, text) {
+    let i = 0;
+
+    function typing() {
+        if (i < text.length) {
+            element.innerHTML = text.substring(0, i) + '<span class="cursor"></span>';
+            i++;
+            setTimeout(typing, 15);
+        } else {
+            element.innerHTML = text;
+        }
+    }
+
+    typing();
+}
+
+function sendMessage() {
+    let input = document.getElementById("queryInput");
+    let query = input.value;
+
+    if (!query.trim()) return;
+
+    appendMessage(query, "user");
+    input.value = "";
+
+    // Thinking
+    let thinking = appendMessage("🤖 Thinking...", "ai");
+
+    fetch("/chat-api/", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": getCSRFToken(),
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: "query=" + encodeURIComponent(query)
+    })
+    .then(res => res.json())
+    .then(data => {
+        thinking.remove();
+
+        let row = appendMessage("", "ai");
+        let aiMessage = row.querySelector(".message.ai");
+
+        typeEffect(aiMessage, data.answer);
+    });
+}
+
+function clearChat() {
+    document.getElementById("chatArea").innerHTML = "";
+}
+
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// Enter key send
+document.addEventListener("DOMContentLoaded", function() {
+    document.getElementById("queryInput").addEventListener("keypress", function(e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+});
+
+</script>
+
+</body>
+</html>
