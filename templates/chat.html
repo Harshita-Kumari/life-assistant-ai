@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<title>Life Assistant AI</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    display: flex;
+    height: 100vh;
+}
+
+/* SIDEBAR */
+#sidebar {
+    width: 250px;
+    background: #202123;
+    color: white;
+    padding: 10px;
+}
+
+#sidebar button {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+/* MAIN */
+#main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* CHAT AREA */
+#chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: #f5f5f5;
+    display: flex;
+    flex-direction: column;
+}
+
+/* MESSAGES */
+.user {
+    align-self: flex-end;
+    background: #007bff;
+    color: white;
+    padding: 10px;
+    border-radius: 10px;
+    margin: 5px;
+    max-width: 60%;
+}
+
+.ai {
+    align-self: flex-start;
+    background: #e5e5e5;
+    padding: 10px;
+    border-radius: 10px;
+    margin: 5px;
+    max-width: 60%;
+}
+
+/* INPUT */
+#input-area {
+    display: flex;
+    padding: 10px;
+    background: white;
+}
+
+#input {
+    flex: 1;
+    padding: 10px;
+}
+
+button {
+    margin-left: 5px;
+    padding: 10px;
+}
+</style>
+
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+
+<div id="sidebar">
+    <button onclick="newChat()">+ New Chat</button>
+</div>
+
+<!-- MAIN -->
+
+<div id="main">
+
+```
+<div id="chat"></div>
+
+<div id="input-area">
+    <input id="input" type="text" placeholder="Type or speak...">
+    <button onclick="sendMessage()">Send</button>
+    <button onclick="startMic()">🎤</button>
+</div>
+```
+
+</div>
+
+<script>
+
+let currentConv = null;
+
+// ================= SEND MESSAGE =================
+function sendMessage() {
+    let inputBox = document.getElementById("input");
+    let message = inputBox.value;
+
+    if(message.trim() === "") return;
+
+    let chat = document.getElementById("chat");
+
+    // USER MESSAGE
+    chat.innerHTML += `<div class="user">${message}</div>`;
+    scrollChat();
+
+    fetch(`/chat-api/?message=${message}&conv_id=${currentConv || ''}`)
+    .then(res => res.json())
+    .then(data => {
+
+        currentConv = data.conv_id;
+
+        // AI MESSAGE
+        chat.innerHTML += `<div class="ai">${data.response}</div>`;
+
+        // 🔊 SPEAK FIXED
+        speak(data.response);
+
+        scrollChat();
+    });
+
+    inputBox.value = "";
+}
+
+
+// ================= MIC =================
+function startMic() {
+
+    if (!('webkitSpeechRecognition' in window)) {
+        alert("Use Chrome for voice");
+        return;
+    }
+
+    const recognition = new webkitSpeechRecognition();
+
+    recognition.start();
+
+    recognition.onresult = function(event) {
+        let text = event.results[0][0].transcript;
+        document.getElementById("input").value = text;
+        sendMessage();
+    };
+}
+
+
+// ================= SPEAK FIX =================
+function speak(text) {
+
+    // stop previous speech
+    window.speechSynthesis.cancel();
+
+    let speech = new SpeechSynthesisUtterance(text);
+
+    speech.rate = 1;
+    speech.pitch = 1;
+    speech.volume = 1;
+
+    window.speechSynthesis.speak(speech);
+}
+
+
+// ================= SCROLL =================
+function scrollChat() {
+    let chat = document.getElementById("chat");
+    chat.scrollTop = chat.scrollHeight;
+}
+
+
+// ================= NEW CHAT =================
+function newChat() {
+    currentConv = null;
+    document.getElementById("chat").innerHTML = "";
+}
+
+</script>
+
+</body>
+</html>
