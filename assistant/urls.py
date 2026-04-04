@@ -1,8 +1,42 @@
 from django.urls import path
-from .views import chat_page, chat_api, load_chat
+from django.views.generic import TemplateView
+from .views import (
+    chat_page,
+    chat_api,
+    load_chat,
+    conversations_api,
+    reminders_api,
+    delete_conversation_api,
+    toggle_pin_conversation_api,
+    rename_conversation_api,
+    history_page,
+    history_api,
+    habit_tracker_page,
+    habit_tracker_api,
+    goals_page,
+    ai_status_api,
+    chat_stream_api,
+    task_manager_page,
+    task_manager_api,
+)
 
 urlpatterns = [
     path('', chat_page),
     path('chat-api/', chat_api),
+    path('chat-stream-api/', chat_stream_api),
     path('load-chat/', load_chat),
+    path('conversations-api/', conversations_api),
+    path('reminders-api/', reminders_api),
+    path('delete-conversation/<int:conv_id>/', delete_conversation_api),
+    path('toggle-pin-conversation/<int:conv_id>/', toggle_pin_conversation_api),
+    path('rename-conversation/<int:conv_id>/', rename_conversation_api),
+    path('history/', history_page),
+    path('history-api/', history_api),
+    path('habits/', habit_tracker_page),
+    path('habits-api/', habit_tracker_api),
+    path('goals/', goals_page),
+    path('tasks/', task_manager_page),
+    path('tasks-api/', task_manager_api),
+    path('ai-status/', ai_status_api),
+    path('voice-test/', TemplateView.as_view(template_name='voice_test.html')),
 ]

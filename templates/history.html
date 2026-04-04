@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Conversation History - Smart Life Assistant</title>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: radial-gradient(circle at top left, #1f2933 0, #111827 45%, #020617 100%);
+            --shell: rgba(15, 23, 42, 0.96);
+            --border: rgba(148, 163, 184, 0.2);
+            --text: #f9fafb;
+            --muted: rgba(229, 231, 235, 0.72);
+            --surface: rgba(15, 23, 42, 0.95);
+            --surface-2: rgba(31, 41, 55, 0.9);
+            --surface-border: rgba(55, 65, 81, 0.9);
+            --accent: #22c55e;
+            --accent-2: #16a34a;
+            --primary: #2563eb;
+            --primary-2: #4f46e5;
+            --shadow: rgba(15, 23, 42, 0.95);
+        }
+
+        body[data-theme="light"] {
+            --bg: radial-gradient(circle at top left, #ffffff 0, #f1f5f9 55%, #e2e8f0 100%);
+            --shell: rgba(255, 255, 255, 0.92);
+            --border: rgba(15, 23, 42, 0.14);
+            --text: #0f172a;
+            --muted: rgba(15, 23, 42, 0.62);
+            --surface: rgba(255, 255, 255, 0.92);
+            --surface-2: rgba(226, 232, 240, 0.9);
+            --surface-border: rgba(15, 23, 42, 0.12);
+            --shadow: rgba(2, 6, 23, 0.18);
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            padding: 20px;
+            border-radius: 16px;
+            background: var(--shell);
+            border: 1px solid var(--border);
+            box-shadow: 0 22px 45px var(--shadow);
+        }
+
+        .header-left h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .header-left p {
+            margin: 8px 0 0 0;
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 10px 18px;
+            transition: all 0.15s ease;
+            background: var(--surface-2);
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            color: #022c22;
+            box-shadow: 0 10px 25px rgba(34, 197, 94, 0.35);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 30px rgba(34, 197, 94, 0.45);
+        }
+
+        .btn-ghost {
+            background: rgba(15, 23, 42, 0.25);
+            border-color: var(--surface-border);
+        }
+
+        .btn-ghost:hover {
+            background: rgba(31, 41, 55, 1);
+            border-color: rgba(75, 85, 99, 1);
+        }
+
+        .search-bar {
+            margin-bottom: 24px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 999px;
+            border: 1px solid var(--surface-border);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 15px;
+            outline: none;
+            transition: all 0.15s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+        }
+
+        .search-input::placeholder {
+            color: var(--muted);
+        }
+
+        .stats {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding: 16px;
+            border-radius: 12px;
+            background: var(--surface);
+            border: 1px solid var(--surface-border);
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .conversations-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .conversation-card {
+            padding: 20px;
+            border-radius: 14px;
+            background: var(--surface);
+            border: 1px solid var(--surface-border);
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+
+        .conversation-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 30px var(--shadow);
+            border-color: var(--accent);
+        }
+
+        .conversation-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .conversation-title {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pinned-badge {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        .conversation-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .conversation-preview {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            background: var(--surface-2);
+            font-size: 13px;
+            line-height: 1.5;
+            opacity: 0.85;
+        }
+
+        .message-count {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .empty-state h3 {
+            margin: 0 0 8px 0;
+            font-size: 20px;
+        }
+
+        .empty-state p {
+            margin: 0;
+            opacity: 0.7;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            opacity: 0.7;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px 20px;
+            opacity: 0.7;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 16px;
+                align-items: flex-start;
+            }
+
+            .header-right {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .stats {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <h1>💬 Conversation History</h1>
+                <p>View and search all your past conversations</p>
+            </div>
+            <div class="header-right">
+                <a href="/" class="btn btn-ghost">← Back to Chat</a>
+                <button class="btn btn-ghost" onclick="toggleTheme()" id="theme-toggle">🌙 Dark</button>
+            </div>
+        </div>
+
+        <div class="search-bar">
+            <input 
+                type="text" 
+                id="search-input"
+                class="search-input" 
+                placeholder="🔍 Search conversations by title or content..."
+                oninput="searchConversations(this.value)"
+            >
+        </div>
+
+        <div class="stats" id="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="total-conversations">-</div>
+                <div class="stat-label">Total Conversations</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="total-messages">-</div>
+                <div class="stat-label">Total Messages</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pinned-count">-</div>
+                <div class="stat-label">Pinned</div>
+            </div>
+        </div>
+
+        <div class="conversations-list" id="conversations-list">
+            <div class="loading">Loading conversations...</div>
+        </div>
+    </div>
+
+    <script>
+        let allConversations = [];
+
+        function toggleTheme() {
+            const body = document.body;
+            const current = body.getAttribute("data-theme") || "dark";
+            const next = current === "light" ? "dark" : "light";
+            body.setAttribute("data-theme", next);
+            localStorage.setItem("theme", next);
+            const toggle = document.getElementById("theme-toggle");
+            if (toggle) toggle.textContent = next === "light" ? "☀️ Light" : "🌙 Dark";
+        }
+
+        function applySavedTheme() {
+            const saved = localStorage.getItem("theme");
+            if (saved) document.body.setAttribute("data-theme", saved);
+            const toggle = document.getElementById("theme-toggle");
+            const current = document.body.getAttribute("data-theme") || "dark";
+            if (toggle) toggle.textContent = current === "light" ? "☀️ Light" : "🌙 Dark";
+        }
+
+        async function loadConversations() {
+            try {
+                const response = await fetch('/history-api/');
+                const data = await response.json();
+                allConversations = data.conversations || [];
+                renderConversations(allConversations);
+                updateStats();
+            } catch (error) {
+                console.error('Error loading conversations:', error);
+                document.getElementById('conversations-list').innerHTML = 
+                    '<div class="no-results">Error loading conversations</div>';
+            }
+        }
+
+        function renderConversations(conversations) {
+            const list = document.getElementById('conversations-list');
+            
+            if (conversations.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💭</div>
+                        <h3>No conversations yet</h3>
+                        <p>Start chatting to build your conversation history</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = conversations.map(conv => {
+                const date = new Date(conv.created_at);
+                const timeAgo = getTimeAgo(date);
+                const formattedDate = date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                return `
+                    <div class="conversation-card" onclick="viewConversation(${conv.id})">
+                        <div class="conversation-header">
+                            <div class="conversation-title">
+                                ${escapeHtml(conv.title || 'Untitled Conversation')}
+                                ${conv.is_pinned ? '<span class="pinned-badge">📌 Pinned</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="conversation-meta">
+                            <span>📅 ${timeAgo}</span>
+                            <span class="message-count">💬 ${conv.message_count} messages</span>
+                            <span>${formattedDate}</span>
+                        </div>
+                        ${conv.preview ? `
+                            <div class="conversation-preview">
+                                ${escapeHtml(conv.preview)}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateStats() {
+            const totalConversations = allConversations.length;
+            const totalMessages = allConversations.reduce((sum, c) => sum + c.message_count, 0);
+            const pinnedCount = allConversations.filter(c => c.is_pinned).length;
+
+            document.getElementById('total-conversations').textContent = totalConversations;
+            document.getElementById('total-messages').textContent = totalMessages;
+            document.getElementById('pinned-count').textContent = pinnedCount;
+        }
+
+        function searchConversations(query) {
+            if (!query.trim()) {
+                renderConversations(allConversations);
+                return;
+            }
+
+            const searchTerm = query.toLowerCase();
+            const filtered = allConversations.filter(conv => {
+                return (conv.title && conv.title.toLowerCase().includes(searchTerm)) ||
+                       (conv.preview && conv.preview.toLowerCase().includes(searchTerm));
+            });
+
+            if (filtered.length === 0) {
+                document.getElementById('conversations-list').innerHTML = `
+                    <div class="no-results">
+                        <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+                        <h3>No conversations found</h3>
+                        <p>Try a different search term</p>
+                    </div>
+                `;
+            } else {
+                renderConversations(filtered);
+            }
+        }
+
+        function viewConversation(convId) {
+            window.location.href = `/?conv_id=${convId}`;
+        }
+
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            
+            if (seconds < 60) return 'Just now';
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+            if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+            
+            return `${Math.floor(seconds / 604800)}w ago`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize
+        applySavedTheme();
+        loadConversations();
+    </script>
+</body>
+</html>

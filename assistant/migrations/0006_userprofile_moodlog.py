@@ -1,0 +1,42 @@
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+    dependencies = [
+        ("assistant", "0005_conversation_context_fields"),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name="UserProfile",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("display_name", models.CharField(blank=True, default="", max_length=120)),
+                ("habit_goals", models.TextField(blank=True, default="")),
+                ("preferences", models.TextField(blank=True, default="")),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+            ],
+        ),
+        migrations.CreateModel(
+            name="MoodLog",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("mood", models.CharField(max_length=40)),
+                ("intensity", models.CharField(default="medium", max_length=20)),
+                ("message", models.TextField()),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "conversation",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="mood_logs",
+                        to="assistant.conversation",
+                    ),
+                ),
+            ],
+        ),
+    ]
+

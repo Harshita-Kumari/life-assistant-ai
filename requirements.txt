@@ -1,0 +1,17 @@
+asgiref==3.11.1
+certifi==2026.2.25
+charset-normalizer==3.4.7
+comtypes==1.4.16
+Django==6.0.3
+idna==3.11
+PyAudio==0.2.14
+pypiwin32==223
+python-dotenv==1.2.2
+pyttsx3==2.99
+pywin32==311
+requests==2.33.1
+SpeechRecognition==3.15.2
+sqlparse==0.5.5
+typing_extensions==4.15.0
+tzdata==2025.3
+urllib3==2.6.3

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voice Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            margin: 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            border: 2px solid #22c55e;
+            background: #22c55e;
+            color: white;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #16a34a;
+        }
+        button:disabled {
+            background: #ccc;
+            border-color: #ccc;
+        }
+        #status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        #result {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            font-size: 18px;
+            min-height: 50px;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎤 Voice Recognition Test</h1>
+    
+    <div class="info">
+        <h3>Browser Support Check:</h3>
+        <p><strong>Speech Recognition:</strong> <span id="support-check">Checking...</span></p>
+        <p><strong>Browser:</strong> <span id="browser-info">-</span></p>
+    </div>
+
+    <div id="status">Click "Start Listening" to test</div>
+    
+    <div>
+        <button id="start-btn" onclick="startTest()">🎙️ Start Listening</button>
+        <button id="stop-btn" onclick="stopTest()" disabled>⏹️ Stop</button>
+    </div>
+    
+    <h3>What I Heard:</h3>
+    <div id="result">Your speech will appear here...</div>
+    
+    <div class="info">
+        <h3>📋 Instructions:</h3>
+        <ol>
+            <li>Use <strong>Google Chrome</strong> or <strong>Microsoft Edge</strong></li>
+            <li>Click "Start Listening"</li>
+            <li>When browser asks for microphone access, click <strong>"Allow"</strong></li>
+            <li>Speak any command (e.g., "open youtube")</li>
+            <li>Check if text appears in the result box</li>
+        </ol>
+    </div>
+
+    <script>
+        let recognition = null;
+        let isListening = false;
+
+        // Check browser support
+        window.onload = function() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const supportCheck = document.getElementById('support-check');
+            const browserInfo = document.getElementById('browser-info');
+            
+            if (SpeechRecognition) {
+                supportCheck.innerHTML = '<span style="color: green;">✅ Supported</span>';
+            } else {
+                supportCheck.innerHTML = '<span style="color: red;">❌ Not Supported - Use Chrome/Edge</span>';
+            }
+            
+            const ua = navigator.userAgent;
+            if (ua.includes('Chrome')) {
+                browserInfo.textContent = 'Google Chrome';
+            } else if (ua.includes('Edg')) {
+                browserInfo.textContent = 'Microsoft Edge';
+            } else if (ua.includes('Firefox')) {
+                browserInfo.textContent = 'Firefox (Speech Recognition NOT supported)';
+            } else {
+                browserInfo.textContent = 'Other browser (may not work)';
+            }
+        };
+
+        function startTest() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                alert('Speech Recognition is NOT supported in your browser.\n\nPlease use Google Chrome or Microsoft Edge.');
+                return;
+            }
+
+            if (isListening) return;
+
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = function() {
+                isListening = true;
+                document.getElementById('status').textContent = '🎙️ Listening... Speak now!';
+                document.getElementById('status').style.background = '#e7ffe7';
+                document.getElementById('start-btn').disabled = true;
+                document.getElementById('stop-btn').disabled = false;
+            };
+
+            recognition.onresult = function(event) {
+                const text = event.results[event.results.length - 1][0].transcript;
+                document.getElementById('result').textContent = text;
+                document.getElementById('status').textContent = '✅ Heard you! Continue speaking...';
+                
+                // Try to send to main assistant
+                console.log('Sending to assistant:', text);
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech error:', event.error);
+                let errorMsg = '';
+                switch(event.error) {
+                    case 'not-allowed':
+                        errorMsg = '❌ Microphone access DENIED. Please allow mic permissions in browser settings.';
+                        break;
+                    case 'no-speech':
+                        errorMsg = '⚠️ No speech detected. Try speaking louder.';
+                        break;
+                    case 'network':
+                        errorMsg = '❌ Network error. Check your internet connection.';
+                        break;
+                    case 'audio-capture':
+                        errorMsg = '❌ No microphone found. Check if mic is connected.';
+                        break;
+                    default:
+                        errorMsg = `❌ Error: ${event.error}`;
+                }
+                document.getElementById('status').textContent = errorMsg;
+                document.getElementById('status').style.background = '#ffe7e7';
+            };
+
+            recognition.onend = function() {
+                if (isListening) {
+                    // Auto-restart for continuous listening
+                    try {
+                        recognition.start();
+                    } catch(e) {
+                        console.log('Restart error:', e);
+                    }
+                }
+            };
+
+            try {
+                recognition.start();
+            } catch(e) {
+                alert('Error starting speech recognition: ' + e.message);
+                console.error(e);
+            }
+        }
+
+        function stopTest() {
+            isListening = false;
+            if (recognition) {
+                try {
+                    recognition.stop();
+                } catch(e) {
+                    console.log('Stop error:', e);
+                }
+            }
+            document.getElementById('status').textContent = '⏹️ Stopped. Click "Start Listening" to test again.';
+            document.getElementById('status').style.background = '#f0f0f0';
+            document.getElementById('start-btn').disabled = false;
+            document.getElementById('stop-btn').disabled = true;
+        }
+    </script>
+</body>
+</html>

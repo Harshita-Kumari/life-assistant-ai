@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Goals Dashboard - Smart Life Assistant</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+
+        :root {
+            --bg: radial-gradient(circle at top left, #1f2933 0, #111827 45%, #020617 100%);
+            --shell: rgba(15, 23, 42, 0.96);
+            --border: rgba(148, 163, 184, 0.2);
+            --text: #f9fafb;
+            --surface: rgba(15, 23, 42, 0.95);
+            --surface-2: rgba(31, 41, 55, 0.9);
+            --surface-border: rgba(55, 65, 81, 0.9);
+            --accent: #22c55e;
+            --accent-2: #16a34a;
+            --primary: #2563eb;
+            --primary-2: #4f46e5;
+            --shadow: rgba(15, 23, 42, 0.95);
+        }
+
+        body[data-theme="light"] {
+            --bg: radial-gradient(circle at top left, #ffffff 0, #f1f5f9 55%, #e2e8f0 100%);
+            --shell: rgba(255, 255, 255, 0.92);
+            --border: rgba(15, 23, 42, 0.14);
+            --text: #0f172a;
+            --surface: rgba(255, 255, 255, 0.92);
+            --surface-2: rgba(226, 232, 240, 0.9);
+            --surface-border: rgba(15, 23, 42, 0.12);
+            --shadow: rgba(2, 6, 23, 0.18);
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; padding: 24px; }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 32px; padding: 20px; border-radius: 16px;
+            background: var(--shell); border: 1px solid var(--border);
+            box-shadow: 0 22px 45px var(--shadow);
+        }
+
+        .header h1 { margin: 0; font-size: 28px; }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            border-radius: 999px; border: 1px solid transparent; cursor: pointer;
+            font-size: 14px; font-weight: 500; padding: 10px 18px;
+            background: var(--surface-2); color: var(--text); text-decoration: none;
+        }
+
+        .btn-ghost { background: rgba(15, 23, 42, 0.25); border-color: var(--surface-border); }
+
+        .goal-card {
+            padding: 30px; border-radius: 16px; background: var(--surface);
+            border: 2px solid var(--accent); box-shadow: 0 22px 45px var(--shadow);
+            margin-bottom: 24px;
+        }
+
+        .goal-title {
+            font-size: 28px; font-weight: 700; margin: 0 0 16px 0;
+            color: var(--accent);
+        }
+
+        .progress-bar-container {
+            width: 100%; height: 20px; background: var(--surface-2);
+            border-radius: 999px; overflow: hidden; margin-bottom: 16px;
+        }
+
+        .progress-bar {
+            height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            transition: width 0.3s ease; border-radius: 999px;
+        }
+
+        .progress-text {
+            font-size: 18px; font-weight: 600; margin-bottom: 24px;
+        }
+
+        .steps-list { margin: 0; padding: 0; list-style: none; }
+
+        .step-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px; margin-bottom: 8px; border-radius: 10px;
+            background: var(--surface-2); border: 1px solid var(--surface-border);
+        }
+
+        .step-done {
+            opacity: 0.6;
+        }
+
+        .step-check {
+            width: 24px; height: 24px; border-radius: 50%;
+            background: var(--accent); display: flex; align-items: center;
+            justify-content: center; color: #022c22; font-weight: bold;
+        }
+
+        .step-circle {
+            width: 24px; height: 24px; border-radius: 50%;
+            background: var(--surface); border: 2px solid var(--surface-border);
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .step-text { font-size: 15px; flex: 1; }
+
+        .completed-section { margin-top: 32px; }
+
+        .completed-title { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
+
+        .completed-item {
+            padding: 16px; margin-bottom: 8px; border-radius: 10px;
+            background: var(--surface); border: 1px solid var(--surface-border);
+            opacity: 0.7;
+        }
+
+        .empty-state {
+            text-align: center; padding: 60px 20px;
+        }
+
+        .empty-state-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Goals Dashboard</h1>
+            <a href="/" class="btn btn-ghost">← Back to Chat</a>
+        </div>
+
+        {% if active_goal %}
+        <div class="goal-card">
+            <h2 class="goal-title">{{ active_goal.title }}</h2>
+
+            <div class="progress-bar-container">
+                <div class="progress-bar" style="width: {{ active_goal.progress }}%"></div>
+            </div>
+
+            <div class="progress-text">
+                {{ active_goal.completed }} of {{ active_goal.total }} steps completed ({{ active_goal.progress|floatformat:0 }}%)
+            </div>
+
+            <ul class="steps-list">
+                {% for step in active_goal.steps %}
+                <li class="step-item {% if step.is_done %}step-done{% endif %}">
+                    {% if step.is_done %}
+                    <div class="step-check">✓</div>
+                    {% else %}
+                    <div class="step-circle"></div>
+                    {% endif %}
+                    <span class="step-text">{{ step.text }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🎯</div>
+            <h2>No Active Goal</h2>
+            <p>Tell your assistant what you want to achieve!</p>
+            <p style="margin-top: 16px; opacity: 0.7;">
+                Say: "I want to learn Python" or "My goal is to get fit"
+            </p>
+        </div>
+        {% endif %}
+
+        {% if completed_goals %}
+        <div class="completed-section">
+            <h2 class="completed-title">✅ Completed Goals</h2>
+            {% for goal in completed_goals %}
+            <div class="completed-item">
+                <strong>{{ goal.title }}</strong><br>
+                <small>Completed on {{ goal.updated_at|date:"M d, Y" }}</small>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
