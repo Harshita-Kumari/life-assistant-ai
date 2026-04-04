@@ -194,3 +194,39 @@ class Task(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Subject(models.Model):
+    """A course or subject the student is studying."""
+    name = models.CharField(max_length=100)
+    teacher = models.CharField(max_length=100, blank=True, default="")
+    color = models.CharField(max_length=20, default="#3b82f6")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Assignment(models.Model):
+    """Homework or assignment for a subject."""
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="assignments")
+    title = models.CharField(max_length=200)
+    description = models.TextField(default="", blank=True)
+    due_date = models.DateTimeField(null=True, blank=True)
+    is_completed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} ({self.subject.name})"
+
+
+class Exam(models.Model):
+    """Upcoming exam or test."""
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="exams")
+    title = models.CharField(max_length=200)
+    exam_date = models.DateTimeField()
+    topics = models.TextField(default="", blank=True, help_text="Comma separated topics")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} - {self.exam_date.strftime('%b %d, %I:%M %p')}"

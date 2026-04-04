@@ -14,6 +14,9 @@ from .models import (
     HabitTracker,
     HabitLog,
     Task,
+    Subject,
+    Assignment,
+    Exam,
 )
 from django.db import models
 from django.utils import timezone
@@ -310,6 +313,103 @@ def goals_page(request):
 def task_manager_page(request):
     """Display task manager page."""
     return render(request, 'task_manager.html')
+
+
+def student_dashboard(request):
+    """Display student dashboard."""
+    subjects = Subject.objects.all().order_by('name')
+    upcoming_exams = Exam.objects.filter(exam_date__gte=timezone.now()).order_by('exam_date')[:5]
+    pending_assignments = Assignment.objects.filter(is_completed=False).order_by('due_date')[:5]
+    
+    return render(request, 'student_dashboard.html', {
+        'subjects': subjects,
+        'upcoming_exams': upcoming_exams,
+        'pending_assignments': pending_assignments,
+    })
+
+
+def student_api(request):
+    """API endpoint for student features."""
+    if request.method == 'POST':
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        
+        action = payload.get('action')
+        
+        # Add Subject
+        if action == 'add_subject':
+            name = payload.get('name', '').strip()
+            if not name:
+                return JsonResponse({'error': 'Subject name required'}, status=400)
+            sub, created = Subject.objects.get_or_create(name__iexact=name, defaults={'name': name})
+            return JsonResponse({'success': True, 'message': f"Subject '{sub.name}' added!"})
+            
+        # Add Assignment
+        elif action == 'add_assignment':
+            title = payload.get('title', '').strip()
+            subject_name = payload.get('subject', '').strip()
+            if not title:
+                return JsonResponse({'error': 'Title required'}, status=400)
+            
+            subject = None
+            if subject_name:
+                subject = Subject.objects.filter(name__iexact=subject_name).first()
+            
+            if not subject:
+                return JsonResponse({'error': f"Subject '{subject_name}' not found. Please add it first."}, status=404)
+                
+            due = payload.get('due_date')
+            assignment = Assignment.objects.create(
+                subject=subject,
+                title=title,
+                description=payload.get('description', ''),
+                due_date=due
+            )
+            return JsonResponse({'success': True, 'message': f"Assignment '{title}' added for {subject.name}!"})
+
+        # Complete Assignment
+        elif action == 'complete_assignment':
+            query = payload.get('title', '').strip()
+            assignment = Assignment.objects.filter(title__icontains=query, is_completed=False).first()
+            if assignment:
+                assignment.is_completed = True
+                assignment.save()
+                return JsonResponse({'success': True, 'message': f"Assignment '{assignment.title}' marked as done!"})
+            return JsonResponse({'error': 'Assignment not found'}, status=404)
+
+        # Add Exam
+        elif action == 'add_exam':
+            title = payload.get('title', '').strip()
+            exam_date = payload.get('date')
+            subject_name = payload.get('subject', '').strip()
+            
+            if not title or not exam_date:
+                return JsonResponse({'error': 'Title and Date required'}, status=400)
+            
+            subject = None
+            if subject_name:
+                subject = Subject.objects.filter(name__iexact=subject_name).first()
+                
+            exam = Exam.objects.create(
+                subject=subject,
+                title=title,
+                exam_date=exam_date,
+                topics=payload.get('topics', '')
+            )
+            return JsonResponse({'success': True, 'message': f"Exam '{title}' added!"})
+
+    # GET request - get data
+    subjects = list(Subject.objects.values('id', 'name', 'color'))
+    assignments = list(Assignment.objects.filter(is_completed=False).order_by('due_date').values('id', 'title', 'subject__name', 'due_date'))
+    exams = list(Exam.objects.filter(exam_date__gte=timezone.now()).order_by('exam_date').values('id', 'title', 'subject__name', 'exam_date'))
+
+    return JsonResponse({
+        'subjects': subjects,
+        'assignments': assignments,
+        'exams': exams
+    })
 
 
 def task_manager_api(request):
@@ -1240,6 +1340,74 @@ def _detect_goal_opportunity(message: str) -> str | None:
         if re.search(pattern, text):
             return suggestion
     
+    return None
+
+
+def _handle_student_command(message: str) -> dict | None:
+    """Handle student-related commands: subjects, assignments, exams."""
+    m = (message or "").strip()
+    lower = m.lower()
+
+    # Add Subject
+    subject_match = re.search(r"\b(add|create|new)\s+subject\s+(.+)$", lower, flags=re.IGNORECASE)
+    if subject_match:
+        name = subject_match.group(2).strip()
+        Subject.objects.get_or_create(name__iexact=name, defaults={'name': name})
+        return {"response": f"✅ Subject added: '{name}'.", "action": {"type": "refresh_student"}}
+
+    # Add Assignment
+    assign_match = re.search(r"\b(add|create|new)\s+(assignment|homework|project)\s+(?:for\s+)?(.+?)\s+(?:on\s+|in\s+|about\s+|due\s+|to\s+)?(?:do\s+)?(.+)$", lower, flags=re.IGNORECASE)
+    if assign_match:
+        subj_name = assign_match.group(3).strip()
+        title = assign_match.group(4).strip()
+        
+        subject = Subject.objects.filter(name__iexact=subj_name).first()
+        if subject:
+            Assignment.objects.create(subject=subject, title=title)
+            return {"response": f"✅ Assignment '{title}' added for {subject.name}.", "action": {"type": "refresh_student"}}
+        else:
+            return {"response": f"Subject '{subj_name}' not found. Please add the subject first."}
+
+    # Add Exam
+    exam_match = re.search(r"\b(add|create|new)\s+(exam|test|quiz)\s+(?:for\s+)?(.+?)\s+(?:on\s+|at\s+|in\s+)?(.+)$", lower, flags=re.IGNORECASE)
+    if exam_match:
+        subj_name = exam_match.group(3).strip()
+        date_str = exam_match.group(4).strip()
+        # Attempt to parse date or just store it
+        subject = Subject.objects.filter(name__iexact=subj_name).first()
+        Exam.objects.create(
+            subject=subject,
+            title=f"{subj_name} Exam",
+            exam_date=timezone.now() + timezone.timedelta(days=7), # Placeholder date
+        )
+        return {"response": f"📅 Exam added for {subj_name}.", "action": {"type": "refresh_student"}}
+
+    # List Student Data
+    if re.search(r"\b(my\s+)?(subjects|classes)\b", lower):
+        subjects = list(Subject.objects.values_list('name', flat=True))
+        if subjects:
+            return {"response": f"📚 Your subjects are: {', '.join(subjects)}.", "action": {"type": "refresh_student"}}
+        return {"response": "You haven't added any subjects yet."}
+
+    if re.search(r"\b(my\s+)?(assignments|homework|pending)\b", lower):
+        count = Assignment.objects.filter(is_completed=False).count()
+        if count > 0:
+            items = list(Assignment.objects.filter(is_completed=False).values_list('title', 'subject__name'))
+            msg = "\n".join([f"- {t} ({s})" for t, s in items[:5]])
+            return {"response": f"📝 You have {count} pending assignments:\n{msg}", "action": {"type": "refresh_student"}}
+        return {"response": "🎉 No pending assignments! You're all caught up."}
+
+    # Complete Assignment
+    complete_match = re.search(r"\b(complete|done|finish)\s+(assignment|homework)\s+(.+)$", lower, flags=re.IGNORECASE)
+    if complete_match:
+        title = complete_match.group(3).strip()
+        assign = Assignment.objects.filter(title__icontains=title, is_completed=False).first()
+        if assign:
+            assign.is_completed = True
+            assign.save()
+            return {"response": f"✅ Marked '{assign.title}' as complete!", "action": {"type": "refresh_student"}}
+        return {"response": f"Assignment '{title}' not found."}
+
     return None
 
 
@@ -2789,6 +2957,19 @@ def chat_stream_api(request):
             yield "data: " + json.dumps({"response": goal_response, "conv_id": conversation.id, **mood_meta}) + "\n\n"
         Memory.objects.create(conversation=conversation, message=user_message, response=goal_response)
         return StreamingHttpResponse(goal_gen(), content_type='text/event-stream')
+
+    # Handle Student Commands
+    student_response = _handle_student_command(user_message)
+    if student_response:
+        def student_gen():
+            yield "data: " + json.dumps({
+                "response": student_response.get("response"), 
+                "conv_id": conversation.id, 
+                "action": student_response.get("action"), 
+                **mood_meta
+            }) + "\n\n"
+        Memory.objects.create(conversation=conversation, message=user_message, response=student_response.get("response"))
+        return StreamingHttpResponse(student_gen(), content_type='text/event-stream')
 
     # Handle Task Commands
     task_response = _handle_task_command(user_message)

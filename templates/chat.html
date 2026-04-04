@@ -316,6 +316,7 @@ body {
         <div class="sidebar-section">
             <div class="sidebar-section-title">Quick Links</div>
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <a href="/student/" class="nav-pill">🎓 <span>Student</span></a>
                 <a href="/tasks/" class="nav-pill">✅ <span>Tasks</span></a>
                 <a href="/goals/" class="nav-pill">🎯 <span>Goals</span></a>
                 <a href="/habits/" class="nav-pill">📊 <span>Habits</span></a>
@@ -748,7 +749,8 @@ async function sendMessage() {
                                 startTimer(data.action.seconds, data.action.label);
                             } else if (data.action.type === 'refresh_tasks') {
                                 console.log("✅ Task updated.");
-                                // Note: In a real app, we might update a sidebar widget here.
+                            } else if (data.action.type === 'refresh_student') {
+                                console.log("🎓 Student data updated.");
                             }
                         }
 

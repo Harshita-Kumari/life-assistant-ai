@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Assistant - Smart Life Assistant</title>
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-card: rgba(17, 24, 39, 0.6);
+            --border-color: rgba(255, 255, 255, 0.06);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #10b981;
+            --purple: #8b5cf6;
+            --blue: #3b82f6;
+            --radius-lg: 16px;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        body[data-theme="light"] {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-card: rgba(255, 255, 255, 0.8);
+            --border-color: rgba(0, 0, 0, 0.1);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg-primary); color: var(--text-primary); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; padding: 20px; border-radius: var(--radius-lg); background: var(--bg-secondary); border: 1px solid var(--border-color); }
+        .btn { padding: 10px 18px; border-radius: 999px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); cursor: pointer; text-decoration: none; }
+        .btn-primary { background: var(--accent); color: white; border: none; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: var(--bg-card); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; }
+        .card h3 { margin-top: 0; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+        
+        .subject-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; background: var(--purple); color: white; font-size: 12px; font-weight: 600; }
+        .item { padding: 10px 0; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px; }
+        .item:last-child { border-bottom: none; }
+        .item-title { flex: 1; font-weight: 500; }
+        .item-meta { font-size: 12px; color: var(--text-secondary); }
+        
+        .input-group { display: flex; gap: 12px; margin-bottom: 16px; }
+        .input-field { flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); outline: none; }
+        .mini-btn { padding: 8px 12px; border-radius: 8px; border: none; background: var(--blue); color: white; cursor: pointer; font-size: 12px; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1 style="margin:0;">🎓 Student Assistant</h1>
+                <p style="margin:8px 0 0; opacity:0.7;">Manage your subjects, assignments, and exams.</p>
+            </div>
+            <a href="/" class="btn">← Back to Chat</a>
+        </div>
+
+        <div class="grid">
+            <!-- Subjects -->
+            <div class="card">
+                <h3>📚 Subjects</h3>
+                <div id="subjects-list">
+                    {% for sub in subjects %}
+                    <div class="item">
+                        <span class="subject-badge">{{ sub.name }}</span>
+                    </div>
+                    {% empty %}
+                    <p style="color:var(--text-secondary)">No subjects added.</p>
+                    {% endfor %}
+                </div>
+                <div class="input-group" style="margin-top: 16px;">
+                    <input type="text" id="new-subject" class="input-field" placeholder="Add subject...">
+                    <button class="mini-btn" onclick="addSubject()">Add</button>
+                </div>
+            </div>
+
+            <!-- Assignments -->
+            <div class="card">
+                <h3>📝 Assignments</h3>
+                <div id="assignments-list">
+                    {% for assign in pending_assignments %}
+                    <div class="item">
+                        <input type="checkbox" onchange="completeAssignment('{{ assign.title }}')">
+                        <div>
+                            <div class="item-title">{{ assign.title }}</div>
+                            <div class="item-meta">{{ assign.subject.name }}</div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p style="color:var(--text-secondary)">No pending assignments. 🎉</p>
+                    {% endfor %}
+                </div>
+                <div class="input-group" style="margin-top: 16px;">
+                    <input type="text" id="new-assignment" class="input-field" placeholder="Assignment for [Subject]...">
+                    <button class="mini-btn" onclick="addAssignment()">Add</button>
+                </div>
+            </div>
+
+            <!-- Exams -->
+            <div class="card">
+                <h3>📅 Upcoming Exams</h3>
+                <div id="exams-list">
+                    {% for exam in upcoming_exams %}
+                    <div class="item">
+                        <div>
+                            <div class="item-title">{{ exam.title }}</div>
+                            <div class="item-meta">{{ exam.exam_date|date:"M d, h:i A" }}</div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p style="color:var(--text-secondary)">No upcoming exams.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function apiCall(url, body) {
+            return await fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+        }
+
+        async function addSubject() {
+            const name = document.getElementById('new-subject').value.trim();
+            if (!name) return;
+            const res = await apiCall('/student-api/', { action: 'add_subject', name });
+            if (res.ok) window.location.reload();
+        }
+
+        async function addAssignment() {
+            const input = document.getElementById('new-assignment').value.trim();
+            if (!input) return;
+            // Simple parse: "Assignment for Math on Algebra"
+            const parts = input.split(/\s+for\s+/i);
+            const title = input;
+            const subject = parts.length > 1 ? parts[1].split(/\s+(on|in|about)\s+/i)[0] : '';
+            
+            const res = await apiCall('/student-api/', { action: 'add_assignment', title, subject });
+            if (res.ok) window.location.reload();
+            else alert(await res.text());
+        }
+
+        async function completeAssignment(title) {
+            await apiCall('/student-api/', { action: 'complete_assignment', title });
+            window.location.reload();
+        }
+
+        // Enter key support
+        document.getElementById('new-subject').addEventListener('keydown', e => { if(e.key === 'Enter') addSubject(); });
+        document.getElementById('new-assignment').addEventListener('keydown', e => { if(e.key === 'Enter') addAssignment(); });
+    </script>
+</body>
+</html>

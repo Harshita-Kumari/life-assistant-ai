@@ -18,6 +18,8 @@ from .views import (
     chat_stream_api,
     task_manager_page,
     task_manager_api,
+    student_dashboard,
+    student_api,
 )
 
 urlpatterns = [
@@ -37,6 +39,8 @@ urlpatterns = [
     path('goals/', goals_page),
     path('tasks/', task_manager_page),
     path('tasks-api/', task_manager_api),
+    path('student/', student_dashboard),
+    path('student-api/', student_api),
     path('ai-status/', ai_status_api),
     path('voice-test/', TemplateView.as_view(template_name='voice_test.html')),
 ]
