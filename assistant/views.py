@@ -17,6 +17,7 @@ from .models import (
     Subject,
     Assignment,
     Exam,
+    MediaPreference,
 )
 from django.db import models
 from django.utils import timezone
@@ -1340,6 +1341,68 @@ def _detect_goal_opportunity(message: str) -> str | None:
         if re.search(pattern, text):
             return suggestion
     
+    return None
+
+
+def _handle_media_command(message: str) -> dict | None:
+    """Handle media-related commands: Play music/video, Open platform, Volume."""
+    m = (message or "").strip()
+    lower = m.lower()
+
+    # 1. Play Song / Music
+    song_match = re.search(r"\b(play|listen to|search)\s+(?:song|music|track)\s+(.+)$", lower, flags=re.IGNORECASE)
+    if song_match:
+        query = song_match.group(2).strip()
+        # Check for platform specific
+        if "spotify" in query:
+            url = f"https://open.spotify.com/search/{quote_plus(query)}"
+            return {"response": f"🎵 Searching Spotify for {query}.", "action": {"type": "open_url", "url": url}}
+        url = f"https://www.youtube.com/results?search_query={quote_plus(query + ' song')}"
+        return {"response": f"🎵 Playing '{query}' on YouTube.", "action": {"type": "open_url", "url": url}}
+
+    # 2. Play Video / Movie / Show
+    video_match = re.search(r"\b(play|watch|search)\s+(?:video|movie|show|episode)\s+(.+)$", lower, flags=re.IGNORECASE)
+    if video_match:
+        query = video_match.group(2).strip()
+        if "netflix" in query:
+            url = f"https://www.netflix.com/search?q={quote_plus(query)}"
+            return {"response": f"🎬 Searching Netflix for {query}.", "action": {"type": "open_url", "url": url}}
+        url = f"https://www.youtube.com/results?search_query={quote_plus(query)}"
+        return {"response": f"🎬 Playing '{query}' on YouTube.", "action": {"type": "open_url", "url": url}}
+
+    # 3. Open Specific Platform
+    platform_match = re.search(r"\b(open|go to|launch)\s+(spotify|netflix|youtube|prime video|hulu|amazon music|soundcloud)", lower, flags=re.IGNORECASE)
+    if platform_match:
+        platform = platform_match.group(2).strip()
+        urls = {
+            "spotify": "https://open.spotify.com",
+            "netflix": "https://www.netflix.com",
+            "youtube": "https://www.youtube.com",
+            "prime video": "https://www.primevideo.com",
+            "hulu": "https://www.hulu.com",
+            "amazon music": "https://music.amazon.in",
+            "soundcloud": "https://soundcloud.com"
+        }
+        if platform in urls:
+            return {"response": f"📺 Opening {platform.title()}.", "action": {"type": "open_url", "url": urls[platform]}}
+
+    # 4. Volume Control (Frontend handles this via 'adjust_volume' action)
+    vol_up = re.search(r"\b(volume|sound|voice)\s*(up|louder|increase|more)", lower, flags=re.IGNORECASE)
+    if vol_up:
+        return {"response": "🔊 Turning up the volume.", "action": {"type": "adjust_volume", "value": "up"}}
+    
+    vol_down = re.search(r"\b(volume|sound|voice)\s*(down|quieter|decrease|less|low)", lower, flags=re.IGNORECASE)
+    if vol_down:
+        return {"response": "🔉 Turning down the volume.", "action": {"type": "adjust_volume", "value": "down"}}
+        
+    mute = re.search(r"\b(mute|shut up|stop talking|be quiet|silence)\b", lower, flags=re.IGNORECASE)
+    if mute:
+        return {"response": "🔇 Muting the assistant.", "action": {"type": "adjust_volume", "value": "mute"}}
+
+    unmute = re.search(r"\b(unmute|speak up|talk)\b", lower, flags=re.IGNORECASE)
+    if unmute:
+        return {"response": "🔊 Unmuted.", "action": {"type": "adjust_volume", "value": "unmute"}}
+
     return None
 
 
@@ -2970,6 +3033,19 @@ def chat_stream_api(request):
             }) + "\n\n"
         Memory.objects.create(conversation=conversation, message=user_message, response=student_response.get("response"))
         return StreamingHttpResponse(student_gen(), content_type='text/event-stream')
+
+    # Handle Media Commands
+    media_response = _handle_media_command(user_message)
+    if media_response:
+        def media_gen():
+            yield "data: " + json.dumps({
+                "response": media_response.get("response"), 
+                "conv_id": conversation.id, 
+                "action": media_response.get("action"), 
+                **mood_meta
+            }) + "\n\n"
+        Memory.objects.create(conversation=conversation, message=user_message, response=media_response.get("response"))
+        return StreamingHttpResponse(media_gen(), content_type='text/event-stream')
 
     # Handle Task Commands
     task_response = _handle_task_command(user_message)

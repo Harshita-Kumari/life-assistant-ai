@@ -318,9 +318,10 @@ body {
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
                 <a href="/student/" class="nav-pill">🎓 <span>Student</span></a>
                 <a href="/tasks/" class="nav-pill">✅ <span>Tasks</span></a>
-                <a href="/goals/" class="nav-pill">🎯 <span>Goals</span></a>
                 <a href="/habits/" class="nav-pill">📊 <span>Habits</span></a>
+                <a href="/goals/" class="nav-pill">🎯 <span>Goals</span></a>
                 <a href="/history/" class="nav-pill">📜 <span>History</span></a>
+                <a href="/media/" class="nav-pill">🎵 <span>Media</span></a>
             </div>
         </div>
 
@@ -511,10 +512,12 @@ function speakNextSentence() {
     const utterance = new SpeechSynthesisUtterance(sentenceToSpeak);
     if (selectedVoice) utterance.voice = selectedVoice;
 
+    // Use the global assistantVolume setting
+    utterance.volume = assistantVolume;
+
     // Natural settings
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
-    utterance.volume = 1.0;
 
     // When this sentence finishes, UNLOCK and speak the next one
     utterance.onend = () => {
@@ -552,6 +555,7 @@ let allConversations = [];
 let timerSeq = 0;
 let lastAiSpeechTime = 0;
 let isSpeakingLocked = false; // Mutex to prevent double-speaking
+let assistantVolume = 1.0; // 0.0 to 1.0
 const activeTimers = new Map();
 
 // Wake Word Configuration
@@ -751,6 +755,8 @@ async function sendMessage() {
                                 console.log("✅ Task updated.");
                             } else if (data.action.type === 'refresh_student') {
                                 console.log("🎓 Student data updated.");
+                            } else if (data.action.type === 'adjust_volume') {
+                                handleVolumeChange(data.action.value);
                             }
                         }
 
@@ -1162,6 +1168,32 @@ function updateVoiceUI(listening) {
 
 // Utilities
 function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+
+function handleVolumeChange(value) {
+    console.log(`🔊 Volume adjustment requested: ${value}`);
+    
+    if (value === 'up') {
+        assistantVolume = Math.min(1.0, assistantVolume + 0.2);
+        addAIMessage(`🔊 Volume increased to ${Math.round(assistantVolume * 100)}%`);
+    } else if (value === 'down') {
+        assistantVolume = Math.max(0.0, assistantVolume - 0.2);
+        addAIMessage(`🔉 Volume decreased to ${Math.round(assistantVolume * 100)}%`);
+    } else if (value === 'mute') {
+        assistantVolume = 0.0;
+        addAIMessage("🔇 Assistant is now muted.");
+    } else if (value === 'unmute') {
+        assistantVolume = 1.0;
+        addAIMessage("🔊 Assistant unmuted.");
+    }
+    
+    // Update UI if needed
+    const status = document.getElementById('voice-status');
+    if (status && assistantVolume === 0) {
+        status.querySelector('span').textContent = "Muted";
+    } else if (status && assistantVolume > 0) {
+        status.querySelector('span').textContent = isListening ? "Listening" : "Idle";
+    }
+}
 function startTimer(seconds, label) {
     const id = ++timerSeq;
     const timeoutId = setTimeout(() => { 

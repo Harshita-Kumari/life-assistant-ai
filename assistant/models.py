@@ -230,3 +230,11 @@ class Exam(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.exam_date.strftime('%b %d, %I:%M %p')}"
+
+
+class MediaPreference(models.Model):
+    """User's preferred media platforms."""
+    music_platform = models.CharField(max_length=50, default="youtube") # youtube, spotify
+    video_platform = models.CharField(max_length=50, default="youtube") # youtube, netflix
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

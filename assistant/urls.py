@@ -41,6 +41,7 @@ urlpatterns = [
     path('tasks-api/', task_manager_api),
     path('student/', student_dashboard),
     path('student-api/', student_api),
+    path('media/', TemplateView.as_view(template_name='media_hub.html')),
     path('ai-status/', ai_status_api),
     path('voice-test/', TemplateView.as_view(template_name='voice_test.html')),
 ]
