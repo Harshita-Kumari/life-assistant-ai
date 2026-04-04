@@ -1,0 +1,37 @@
+{
+  "name": "Smart Life Assistant",
+  "short_name": "LifeAssistant",
+  "description": "AI-powered voice assistant for tasks, habits, goals, and productivity.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0e1a",
+  "theme_color": "#10b981",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Start Listening",
+      "url": "/?action=listen",
+      "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "View Tasks",
+      "url": "/tasks/",
+      "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192"}]
+    }
+  ]
+}

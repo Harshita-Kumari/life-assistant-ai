@@ -1,5 +1,7 @@
 from django.urls import path
 from django.views.generic import TemplateView
+from django.http import JsonResponse, FileResponse
+import os
 from .views import (
     chat_page,
     chat_api,
@@ -44,4 +46,16 @@ urlpatterns = [
     path('media/', TemplateView.as_view(template_name='media_hub.html')),
     path('ai-status/', ai_status_api),
     path('voice-test/', TemplateView.as_view(template_name='voice_test.html')),
+]
+
+# PWA Endpoints
+def serve_manifest(request):
+    return FileResponse(open(os.path.join(os.path.dirname(__file__), '../templates/manifest.json'), 'rb'), content_type='application/json')
+
+def serve_sw(request):
+    return FileResponse(open(os.path.join(os.path.dirname(__file__), '../templates/service-worker.js'), 'rb'), content_type='application/javascript')
+
+urlpatterns += [
+    path('manifest.json', serve_manifest),
+    path('service-worker.js', serve_sw),
 ]

@@ -2,7 +2,14 @@
 <html>
 <head>
 <title>Smart Life Assistant</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#10b981">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LifeAssistant">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
@@ -1203,6 +1210,60 @@ function startTimer(seconds, label) {
     activeTimers.set(id, timeoutId);
     // Note: The "Timer set..." message is handled by the AI response text.
 }
+
+// --- PWA & Mobile App Features ---
+let deferredPrompt;
+const installBtn = document.createElement('button');
+installBtn.id = 'install-app-btn';
+installBtn.textContent = '📲 Install App';
+installBtn.style.cssText = 'position:fixed;bottom:80px;right:20px;padding:10px 16px;border-radius:999px;background:var(--accent);color:#fff;border:none;cursor:pointer;z-index:1000;display:none;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+
+document.body.appendChild(installBtn);
+
+// Listen for install prompt
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.style.display = 'block';
+});
+
+// Handle install button click
+installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+        console.log('✅ User installed the app');
+    }
+    deferredPrompt = null;
+    installBtn.style.display = 'none';
+});
+
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js').then((reg) => {
+            console.log('✅ Service Worker registered:', reg.scope);
+        }).catch((err) => {
+            console.warn('⚠️ SW registration failed:', err);
+        });
+    });
+}
+
+// Mobile Touch Feedback & Haptics
+document.querySelectorAll('button, .nav-pill, .platform-card, .btn').forEach(btn => {
+    btn.addEventListener('touchstart', () => {
+        if (navigator.vibrate) navigator.vibrate(10);
+    });
+});
+
+// Prevent zoom on double tap (mobile)
+let lastTouchEnd = 0;
+document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) e.preventDefault();
+    lastTouchEnd = now;
+}, false);
 </script>
 </body>
 </html>

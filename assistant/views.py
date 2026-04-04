@@ -1344,6 +1344,81 @@ def _detect_goal_opportunity(message: str) -> str | None:
     return None
 
 
+def _handle_web_automation(message: str) -> dict | None:
+    """Handle web automation commands: Email, WhatsApp, Tweet, Calendar."""
+    m = (message or "").strip()
+    lower = m.lower()
+
+    # 1. Email Automation (Gmail Compose)
+    # Pattern: "send email to [email] about [subject]" or "email [email] saying [body]"
+    email_match = re.search(r"\b(send\s+)?email\s+(?:to\s+)?([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)(?:\s+about\s+(.+))?$", lower, flags=re.IGNORECASE)
+    if email_match:
+        # Fallback to better extraction if regex misses the subject
+        full_match = re.search(r"\b(email|send\s+email)\s+(?:to\s+)?([^\s]+)(?:\s+(?:about|with\s+subject|regarding)\s+(.+))?(?:\s+(?:saying|with\s+body|message)\s+(.+))?$", m, flags=re.IGNORECASE)
+        
+        to_email = full_match.group(2) if full_match else email_match.group(2)
+        subject = full_match.group(3) if full_match and full_match.group(3) else ""
+        body = full_match.group(4) if full_match and full_match.group(4) else ""
+        
+        # If "saying" was used but not captured well, try to find it in original string
+        if not body:
+            body_match = re.search(r"\bsaying\s+(.+)$", m, flags=re.IGNORECASE)
+            if body_match: body = body_match.group(1)
+            
+        if not subject:
+            subject_match = re.search(r"\babout\s+(.+?)(?:\s+saying|\s*$)", m, flags=re.IGNORECASE)
+            if subject_match: subject = subject_match.group(1)
+
+        url = f"https://mail.google.com/mail/?view=cm&fs=1&to={to_email}&su={quote_plus(subject)}&body={quote_plus(body)}"
+        return {"response": f"📧 Opening Gmail compose to {to_email}.", "action": {"type": "open_url", "url": url}}
+
+    # 2. WhatsApp Automation
+    # Pattern: "whatsapp [number] [message]" or "message [name] on whatsapp"
+    wa_match = re.search(r"\b(whatsapp|wa|message)\s+(?:on\s+)?(?:whatsapp\s+)?(?:to\s+)?(\+?\d+)?\s*(.*)", lower, flags=re.IGNORECASE)
+    if wa_match:
+        number = wa_match.group(2)
+        msg = wa_match.group(3)
+        if number:
+            # Clean number
+            number = number.replace(" ", "").replace("-", "")
+            if not number.startswith('+'): number = '+' + number # Assume international if needed, or just pass as is. WA API usually wants country code.
+            url = f"https://web.whatsapp.com/send?phone={number}&text={quote_plus(msg)}"
+            return {"response": f"💬 Opening WhatsApp chat with {number}.", "action": {"type": "open_url", "url": url}}
+        elif msg:
+            # Just open whatsapp web with text
+            url = f"https://web.whatsapp.com/send?text={quote_plus(msg)}"
+            return {"response": "💬 Opening WhatsApp Web.", "action": {"type": "open_url", "url": url}}
+
+    # 3. Twitter/X Automation
+    # Pattern: "tweet [text]" or "post on twitter [text]"
+    tweet_match = re.search(r"\b(tweet|post\s+on\s+(?:twitter|x))\s+(.+)$", lower, flags=re.IGNORECASE)
+    if tweet_match:
+        text = tweet_match.group(2)
+        url = f"https://twitter.com/intent/tweet?text={quote_plus(text)}"
+        return {"response": "🐦 Opening Twitter composer.", "action": {"type": "open_url", "url": url}}
+
+    # 4. Calendar Automation
+    # Pattern: "schedule meeting [title] on [date] at [time]" or "add event [title]"
+    cal_match = re.search(r"\b(schedule|add\s+event|create\s+event)\s+(.+)$", lower, flags=re.IGNORECASE)
+    if cal_match:
+        details = cal_match.group(2)
+        # Simple extraction of title (first few words)
+        title = details.split()[0:4] if len(details.split()) > 4 else details.split()
+        title = " ".join(title)
+        url = f"https://calendar.google.com/calendar/render?action=TEMPLATE&text={quote_plus(title)}&details={quote_plus(details)}"
+        return {"response": f"📅 Opening Google Calendar to create event: {title}.", "action": {"type": "open_url", "url": url}}
+
+    # 5. Phone Dialer (Mobile)
+    # Pattern: "call [number]"
+    call_match = re.search(r"\b(call|dial|phone)\s+(\+?\d[\d\s-]{5,}\d)", lower, flags=re.IGNORECASE)
+    if call_match:
+        number = call_match.group(2).replace(" ", "").replace("-", "")
+        url = f"tel:{number}"
+        return {"response": f"📞 Initiating call to {number}.", "action": {"type": "open_url", "url": url}}
+
+    return None
+
+
 def _handle_media_command(message: str) -> dict | None:
     """Handle media-related commands: Play music/video, Open platform, Volume."""
     m = (message or "").strip()
@@ -3046,6 +3121,19 @@ def chat_stream_api(request):
             }) + "\n\n"
         Memory.objects.create(conversation=conversation, message=user_message, response=media_response.get("response"))
         return StreamingHttpResponse(media_gen(), content_type='text/event-stream')
+
+    # Handle Web Automation Commands
+    automation_response = _handle_web_automation(user_message)
+    if automation_response:
+        def automation_gen():
+            yield "data: " + json.dumps({
+                "response": automation_response.get("response"), 
+                "conv_id": conversation.id, 
+                "action": automation_response.get("action"), 
+                **mood_meta
+            }) + "\n\n"
+        Memory.objects.create(conversation=conversation, message=user_message, response=automation_response.get("response"))
+        return StreamingHttpResponse(automation_gen(), content_type='text/event-stream')
 
     # Handle Task Commands
     task_response = _handle_task_command(user_message)
