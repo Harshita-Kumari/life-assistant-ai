@@ -354,6 +354,7 @@ body {
                     <span>Idle</span>
                 </div>
                 <button id="wake-word-toggle" class="btn btn-ghost" onclick="toggleWakeWordMode()" title="Toggle Wake Word Mode">👁️ Wake Word: OFF</button>
+                <button id="agent-toggle-btn" class="btn btn-ghost" onclick="toggleAgent()" title="Toggle Agent Mode">🤖 Agent: OFF</button>
                 <button class="btn btn-ghost" onclick="toggleTheme()" style="padding:10px 14px;">🌙</button>
             </div>
         </header>
@@ -764,6 +765,17 @@ async function sendMessage() {
                                 console.log("🎓 Student data updated.");
                             } else if (data.action.type === 'adjust_volume') {
                                 handleVolumeChange(data.action.value);
+                            }
+                        }
+
+                        // Handle Agent Logs
+                        if (data.agent_log) {
+                            const log = document.getElementById('agent-log');
+                            if(log) {
+                                log.innerHTML += '<div>' + data.agent_log + '</div>';
+                                log.scrollTop = log.scrollHeight;
+                                document.getElementById('agent-status').textContent = 'Working...';
+                                setTimeout(() => { document.getElementById('agent-status').textContent = 'Idle'; }, 2000);
                             }
                         }
 
@@ -1264,6 +1276,81 @@ document.addEventListener('touchend', (e) => {
     if (now - lastTouchEnd <= 300) e.preventDefault();
     lastTouchEnd = now;
 }, false);
+
+// --- AUTONOMOUS AGENT MODE ---
+let autonomousMode = false;
+
+// Agent UI
+const agentPanel = document.createElement('div');
+agentPanel.id = 'agent-panel';
+agentPanel.style.cssText = 'display:none; position:fixed; bottom:90px; left:20px; right:20px; max-width:400px; max-height:300px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:12px; padding:16px; z-index:1000; box-shadow:var(--shadow); overflow-y:auto;';
+agentPanel.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <strong style="display:flex; align-items:center; gap:8px;">🤖 Autonomous Agent <span id="agent-status" style="font-size:11px; opacity:0.7;">Idle</span></strong>
+        <button onclick="document.getElementById('agent-panel').style.display='none'" style="background:none; border:none; color:var(--text-primary); cursor:pointer; font-size:18px;">✖</button>
+    </div>
+    <div id="agent-log" style="max-height:150px; overflow-y:auto; font-size:12px; color:var(--text-secondary); margin-bottom:12px; padding:8px; background:var(--bg-primary); border-radius:8px;">
+        <div>Agent ready. Give me a goal to execute.</div>
+    </div>
+    <div style="display:flex; gap:8px;">
+        <button onclick="toggleAgent()" style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:transparent; color:var(--text-primary); cursor:pointer;">Disable</button>
+        <button onclick="document.getElementById('agent-log').innerHTML=''" style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:transparent; color:var(--text-primary); cursor:pointer;">Clear Log</button>
+    </div>
+`;
+document.body.appendChild(agentPanel);
+
+function toggleAgent() {
+    autonomousMode = !autonomousMode;
+    const panel = document.getElementById('agent-panel');
+    const toggle = document.getElementById('agent-toggle-btn');
+    panel.style.display = autonomousMode ? 'block' : 'none';
+    if(toggle) {
+        toggle.textContent = autonomousMode ? '🤖 Agent: ON' : '🤖 Agent: OFF';
+        toggle.style.background = autonomousMode ? 'var(--accent-soft)' : '';
+    }
+    
+    addAIMessage(autonomousMode ? "🤖 **Autonomous Mode Enabled.** Give me a goal and I'll plan & execute it step-by-step." : "🤖 Agent mode disabled.");
+    const log = document.getElementById('agent-log');
+    if(log) log.innerHTML += `<div>➡️ Mode: ${autonomousMode ? 'Active' : 'Disabled'}</div>`;
+}
+
+// Intercept sendMessage to add autonomous flag
+const originalSendMessage = sendMessage;
+sendMessage = async function() {
+    const input = document.getElementById('input');
+    const text = input.value.trim();
+    if (!text) return;
+    
+    // Temporarily override fetch payload
+    const originalFetch = window.fetch;
+    window.fetch = async (url, opts) => {
+        if (url.includes('chat-stream-api')) {
+            try {
+                let body = JSON.parse(opts.body);
+                body.autonomous = autonomousMode;
+                opts.body = JSON.stringify(body);
+            } catch(e) {}
+        }
+        return originalFetch(url, opts);
+    };
+    
+    await originalSendMessage();
+    window.fetch = originalFetch;
+};
+
+// Extend stream parser to handle agent logs
+const originalReaderLoop = `
+    if (data.agent_log) {
+        const log = document.getElementById('agent-log');
+        if(log) {
+            log.innerHTML += '<div>' + data.agent_log + '</div>';
+            log.scrollTop = log.scrollHeight;
+            document.getElementById('agent-status').textContent = 'Working...';
+            setTimeout(() => { document.getElementById('agent-status').textContent = 'Idle'; }, 2000);
+        }
+    }
+`;
+// Note: We inject this logic directly in the stream loop below since we can't easily patch the running function string.
 </script>
 </body>
 </html>

@@ -1344,6 +1344,75 @@ def _detect_goal_opportunity(message: str) -> str | None:
     return None
 
 
+def _execute_agent_action(action_type: str, params: dict) -> str:
+    """Execute an autonomous agent action safely."""
+    try:
+        if action_type == "create_task":
+            Task.objects.create(
+                title=params.get("title", "New Task"),
+                due_date=params.get("due_date") if params.get("due_date") else None,
+                priority=params.get("priority", "medium")
+            )
+            return f"✅ Created task: {params.get('title')}"
+            
+        elif action_type == "add_reminder":
+            from datetime import timedelta
+            hours = float(params.get("hours", 24))
+            remind_at = timezone.now() + timedelta(hours=hours)
+            Reminder.objects.create(
+                text=params.get("text", "Reminder"),
+                remind_at=remind_at
+            )
+            return f"🔔 Set reminder: {params.get('text')} in {hours}h"
+            
+        elif action_type == "add_habit":
+            name = params.get("name", "New Habit")
+            HabitTracker.objects.create(name=name)
+            return f"📊 Added habit: {name}"
+            
+        elif action_type == "open_url":
+            return f"🌐 Action: Opening {params.get('url')}"
+            
+        elif action_type == "schedule_exam":
+            subj_name = params.get("subject")
+            subj = Subject.objects.filter(name__iexact=subj_name).first() if subj_name else None
+            if subj:
+                Exam.objects.create(
+                    subject=subj,
+                    title=params.get("title"),
+                    exam_date=params.get("date")
+                )
+                return f"📅 Scheduled exam: {params.get('title')}"
+            return f"❌ Subject '{params.get('subject')}' not found."
+            
+        return f"⚠️ Unknown action: {action_type}"
+    except Exception as e:
+        return f"❌ Failed: {str(e)}"
+
+
+def _system_prompt(autonomous: bool = False) -> str:
+    base = (
+        "You are a goal-oriented, emotionally intelligent life assistant. "
+        "Sound human and warm. Keep replies concise."
+    )
+    
+    if autonomous:
+        base += (
+            "\n\n🤖 AGENT MODE ACTIVE: "
+            "You are now an autonomous productivity agent. "
+            "When given a goal, break it into steps and execute them using this exact format: "
+            "[ACTION:tool_name|key=value, key2=value2]\n"
+            "Available tools:\n"
+            "- create_task(title=..., due_date=YYYY-MM-DD, priority=low/medium/high)\n"
+            "- add_reminder(text=..., hours=24)\n"
+            "- add_habit(name=...)\n"
+            "- schedule_exam(subject=..., title=..., date=YYYY-MM-DD)\n"
+            "- open_url(url=...)\n"
+            "Always confirm what you're doing. Max 5 actions per run. End with a summary."
+        )
+    return os.getenv("ASSISTANT_SYSTEM_PROMPT", base)
+
+
 def _handle_web_automation(message: str) -> dict | None:
     """Handle web automation commands: Email, WhatsApp, Tweet, Calendar."""
     m = (message or "").strip()
@@ -3065,6 +3134,12 @@ def chat_stream_api(request):
     detected_mood, mood_intensity = _detect_mood(user_message)
     mood_meta = {"detected_mood": detected_mood, "mood_intensity": mood_intensity}
 
+    # Handle Autonomous Mode
+    autonomous = payload.get("autonomous", False)
+    
+    # Inject agent mode into system prompt
+    messages = [{"role": "system", "content": _system_prompt(autonomous=autonomous)}]
+
     # Handle specialized commands that shouldn't be streamed
     auto_mode_response = _handle_auto_mode_command(lower_msg, profile)
     if auto_mode_response:
@@ -3216,6 +3291,28 @@ def chat_stream_api(request):
                                     full_reply += content
                                     # Send token to frontend
                                     yield f"data: {json.dumps({'token': content})}\n\n"
+                                    
+                                    # Autonomous Agent Action Parser
+                                    if autonomous and "[ACTION:" in content:
+                                        # Check if we have a complete action string
+                                        action_match = re.search(r"\[ACTION:(\w+)\|([^\]]+)\]", full_reply)
+                                        if action_match:
+                                            tool = action_match.group(1)
+                                            params_str = action_match.group(2)
+                                            # Simple key=value parser
+                                            params = {}
+                                            for part in params_str.split(","):
+                                                if "=" in part:
+                                                    k, v = part.split("=", 1)
+                                                    params[k.strip()] = v.strip()
+                                            
+                                            # Execute and yield result
+                                            result = _execute_agent_action(tool, params)
+                                            yield f"data: {json.dumps({'agent_log': result})}\n\n"
+                                            
+                                            # Remove the action tag from full_reply to keep chat clean
+                                            # (Optional, but keeps UI clean)
+                                            # full_reply = full_reply.replace(action_match.group(0), "")
                         except json.JSONDecodeError:
                             continue
         except Exception as e:
