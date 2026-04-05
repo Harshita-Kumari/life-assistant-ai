@@ -10,74 +10,67 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
 <style>
+/* ===== CSS RESET & VARIABLES ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 :root {
-    --bg-primary: #0a0e1a;
-    --bg-secondary: #111827;
-    --bg-card: rgba(17, 24, 39, 0.6);
-    --bg-glass: rgba(255, 255, 255, 0.03);
-    --border-color: rgba(255, 255, 255, 0.06);
-    --border-hover: rgba(255, 255, 255, 0.12);
-    
+    --bg-primary: #020617;
+    --bg-secondary: #0f172a;
+    --bg-tertiary: #1e293b;
+    --bg-glass: rgba(15, 23, 42, 0.6);
+    --bg-glass-light: rgba(30, 41, 59, 0.4);
+    --border-color: rgba(148, 163, 184, 0.1);
+    --border-hover: rgba(16, 185, 129, 0.3);
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
     --text-muted: #64748b;
-    
-    --accent: #06d6a0;
-    --accent-hover: #05b88a;
-    --accent-glow: rgba(6, 214, 160, 0.4);
-    --accent-soft: rgba(6, 214, 160, 0.1);
-    
+    --accent: #10b981;
+    --accent-hover: #059669;
+    --accent-glow: rgba(16, 185, 129, 0.15);
+    --accent-soft: rgba(16, 185, 129, 0.1);
     --primary: #3b82f6;
-    --primary-hover: #2563eb;
-    --primary-glow: rgba(59, 130, 246, 0.4);
     --primary-soft: rgba(59, 130, 246, 0.1);
-    
-    --purple: #8b5cf6;
-    --purple-glow: rgba(139, 92, 246, 0.4);
-    --purple-soft: rgba(139, 92, 246, 0.1);
-    
-    --warning: #fbbf24;
-    --warning-soft: rgba(251, 191, 36, 0.1);
-    
+    --warning: #f59e0b;
     --danger: #ef4444;
-    --danger-soft: rgba(239, 68, 68, 0.1);
-    
+    --purple: #8b5cf6;
+    --purple-soft: rgba(139, 92, 246, 0.1);
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
     --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
-    
     --radius-sm: 8px;
     --radius-md: 12px;
     --radius-lg: 16px;
     --radius-xl: 24px;
     --radius-full: 9999px;
+    --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 body[data-theme="light"] {
     --bg-primary: #f8fafc;
     --bg-secondary: #ffffff;
-    --bg-card: rgba(255, 255, 255, 0.8);
-    --bg-glass: rgba(0, 0, 0, 0.02);
-    --border-color: rgba(0, 0, 0, 0.06);
-    --border-hover: rgba(0, 0, 0, 0.12);
+    --bg-tertiary: #f1f5f9;
+    --bg-glass: rgba(255, 255, 255, 0.7);
+    --bg-glass-light: rgba(255, 255, 255, 0.5);
+    --border-color: rgba(0, 0, 0, 0.08);
+    --border-hover: rgba(16, 185, 129, 0.2);
     --text-primary: #0f172a;
     --text-secondary: #475569;
     --text-muted: #94a3b8;
+    --accent-glow: rgba(16, 185, 129, 0.1);
+    --accent-soft: rgba(16, 185, 129, 0.05);
+    --primary-soft: rgba(59, 130, 246, 0.05);
+    --purple-soft: rgba(139, 92, 246, 0.05);
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
     --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.15);
 }
 
+/* ===== BASE STYLES ===== */
 html { scroll-behavior: smooth; }
-
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     height: 100vh;
@@ -85,257 +78,427 @@ body {
     color: var(--text-primary);
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
-/* Animated Background */
+/* ===== ANIMATED BACKGROUND ===== */
 .bg-mesh {
-    position: fixed; inset: 0; z-index: -1;
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background: var(--bg-primary);
+    overflow: hidden;
+}
+.bg-gradient {
+    position: absolute;
+    inset: -50%;
     background: 
-        radial-gradient(at 0% 0%, rgba(6, 214, 160, 0.15) 0, transparent 50%),
-        radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.15) 0, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0, transparent 50%),
-        radial-gradient(at 0% 100%, rgba(6, 214, 160, 0.1) 0, transparent 50%);
-    animation: meshRotate 30s linear infinite;
+        radial-gradient(600px 600px at 20% 30%, rgba(16, 185, 129, 0.12), transparent),
+        radial-gradient(600px 600px at 80% 20%, rgba(59, 130, 246, 0.1), transparent),
+        radial-gradient(500px 500px at 60% 80%, rgba(139, 92, 246, 0.08), transparent);
+    animation: meshRotate 40s linear infinite;
 }
-@keyframes meshRotate { 0%, 100% { filter: hue-rotate(0deg); } 50% { filter: hue-rotate(180deg); } }
-
-/* Floating Orbs */
+@keyframes meshRotate {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.1); }
+    100% { transform: rotate(360deg) scale(1); }
+}
+.bg-grid {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, var(--border-color) 1px, transparent 1px);
+    background-size: 24px 24px;
+    opacity: 0.3;
+}
 .orb {
-    position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.3;
-    animation: orbFloat 20s ease-in-out infinite; pointer-events: none;
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.4;
+    animation: orbFloat 25s ease-in-out infinite;
+    pointer-events: none;
 }
-.orb-1 { width: 300px; height: 300px; background: var(--accent); top: -100px; left: -100px; animation-delay: 0s; }
-.orb-2 { width: 400px; height: 400px; background: var(--primary); bottom: -150px; right: -150px; animation-delay: -7s; }
-.orb-3 { width: 250px; height: 250px; background: var(--purple); top: 50%; left: 50%; animation-delay: -14s; }
+.orb-1 {
+    width: 400px; height: 400px;
+    background: var(--accent);
+    top: -10%; left: -10%;
+    animation-delay: 0s;
+}
+.orb-2 {
+    width: 500px; height: 500px;
+    background: var(--primary);
+    bottom: -20%; right: -20%;
+    animation-delay: -8s;
+}
+.orb-3 {
+    width: 300px; height: 300px;
+    background: var(--purple);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    animation-delay: -16s;
+}
 @keyframes orbFloat {
     0%, 100% { transform: translate(0, 0) scale(1); }
-    33% { transform: translate(50px, -50px) scale(1.1); }
-    66% { transform: translate(-50px, 50px) scale(0.9); }
+    33% { transform: translate(60px, -60px) scale(1.1); }
+    66% { transform: translate(-60px, 60px) scale(0.9); }
 }
 
-.app-container { display: flex; height: 100vh; max-width: 1600px; margin: 0 auto; position: relative; }
+/* ===== LAYOUT ===== */
+.app-container {
+    display: flex;
+    height: 100vh;
+    max-width: 1600px;
+    margin: 0 auto;
+    position: relative;
+}
 
-/* Sidebar */
+/* ===== SCROLLBAR ===== */
+* { scrollbar-width: thin; scrollbar-color: var(--border-hover) transparent; }
+*::-webkit-scrollbar { width: 5px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: var(--radius-full); }
+*::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* ===== SIDEBAR ===== */
 .sidebar {
-    width: 320px; background: var(--bg-card); backdrop-filter: blur(20px);
-    border-right: 1px solid var(--border-color); display: flex; flex-direction: column;
-    position: relative; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 100;
+    width: 320px;
+    background: var(--bg-glass);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 100;
 }
-.sidebar-header { padding: 24px; border-bottom: 1px solid var(--border-color); }
-.brand { display: flex; align-items: center; gap: 16px; }
+.sidebar-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+.brand { display: flex; align-items: center; gap: 14px; }
 .brand-icon {
-    width: 48px; height: 48px; background: linear-gradient(135deg, var(--accent), var(--primary));
-    border-radius: var(--radius-lg); display: grid; place-items: center; font-size: 24px;
-    box-shadow: 0 8px 24px var(--accent-glow); position: relative; overflow: hidden;
+    width: 44px; height: 44px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--accent), var(--primary));
+    display: grid; place-items: center;
+    font-size: 20px;
+    box-shadow: 0 4px 12px var(--accent-glow), 0 0 0 1px rgba(16, 185, 129, 0.2);
+    position: relative; overflow: hidden;
+    flex-shrink: 0;
 }
-.brand-icon::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, transparent, rgba(255,255,255,0.2)); }
+.brand-icon::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent, rgba(255,255,255,0.15));
+}
 .brand-text h1 {
-    font-size: 18px; font-weight: 800; letter-spacing: -0.02em;
+    font-size: 16px; font-weight: 800; letter-spacing: -0.02em;
     background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
-.brand-text span { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+.brand-text span { font-size: 11px; color: var(--text-muted); font-weight: 500; }
 
-.sidebar-actions { padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; }
-.btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-    padding: 12px 20px; border-radius: var(--radius-md); font-size: 14px; font-weight: 600;
-    cursor: pointer; border: none; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden;
+/* Quick Links */
+.sidebar-section { padding: 16px 24px 8px; }
+.sidebar-section-title {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-muted); margin-bottom: 12px; padding: 0 4px;
 }
-.btn::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1)); opacity: 0; transition: opacity 0.2s; }
-.btn:hover::before { opacity: 1; }
-.btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-hover)); color: white; box-shadow: 0 4px 16px var(--accent-glow); }
-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--accent-glow); }
-.btn-ghost { background: var(--bg-glass); color: var(--text-primary); border: 1px solid var(--border-color); }
-.btn-ghost:hover { background: var(--border-color); border-color: var(--border-hover); transform: translateY(-1px); }
-
-.sidebar-search {
-    margin: 0 24px 16px; padding: 12px 16px; background: var(--bg-glass);
-    border: 1px solid var(--border-color); border-radius: var(--radius-md);
-    color: var(--text-primary); font-size: 14px; outline: none; transition: all 0.2s;
-}
-.sidebar-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.sidebar-search::placeholder { color: var(--text-muted); }
-
-.sidebar-section { padding: 0 24px; margin-bottom: 16px; }
-.sidebar-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 12px; padding: 0 4px; }
-
-.conversation-list { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
-.conversation-item {
-    display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 6px;
-    border-radius: var(--radius-md); background: transparent; border: 1px solid transparent;
-    cursor: pointer; transition: all 0.2s;
-}
-.conversation-item:hover { background: var(--bg-glass); border-color: var(--border-color); transform: translateX(4px); }
-.conversation-item.active { background: var(--accent-soft); border-color: var(--accent); }
-.conversation-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; transition: all 0.2s; }
-.conversation-item.active .conversation-indicator { background: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
-.conversation-info { flex: 1; min-width: 0; }
-.conversation-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.conversation-preview { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
-.conversation-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.2s; }
-.conversation-item:hover .conversation-actions { opacity: 1; }
-.conv-btn {
-    width: 28px; height: 28px; border-radius: var(--radius-sm); border: none; background: transparent;
-    color: var(--text-muted); cursor: pointer; display: grid; place-items: center; font-size: 14px; transition: all 0.15s;
-}
-.conv-btn:hover { background: var(--danger-soft); color: var(--danger); }
-
-/* Main Content */
-.main-content { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
-.main-header {
-    padding: 20px 28px; background: var(--bg-card); backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 16px;
-}
-.header-left h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
-.header-left p { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
-.header-right { display: flex; align-items: center; gap: 10px; }
+.quick-links { display: flex; gap: 6px; flex-wrap: wrap; }
 .nav-pill {
-    padding: 8px 14px; border-radius: var(--radius-full); background: var(--bg-glass);
-    border: 1px solid var(--border-color); color: var(--text-secondary); font-size: 12px; font-weight: 600;
-    text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; white-space: nowrap;
+    padding: 6px 12px; border-radius: var(--radius-full);
+    background: var(--bg-glass-light); border: 1px solid var(--border-color);
+    color: var(--text-secondary); font-size: 11px; font-weight: 600;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+    transition: var(--transition-fast); white-space: nowrap;
 }
-.nav-pill:hover { background: var(--border-color); color: var(--text-primary); transform: translateY(-2px); box-shadow: var(--shadow-md); }
-.status-badge {
-    padding: 8px 14px; border-radius: var(--radius-full); background: var(--bg-glass);
-    border: 1px solid var(--border-color); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;
+.nav-pill:hover {
+    background: var(--accent-soft); border-color: var(--border-hover);
+    color: var(--accent); transform: translateY(-1px);
+    box-shadow: 0 2px 8px var(--accent-glow);
 }
-.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
-.status-badge.listening .status-dot { background: var(--accent); animation: pulse 2s infinite; box-shadow: 0 0 12px var(--accent-glow); }
-@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } }
 
-/* Chat Area */
-.chat-area { flex: 1; overflow-y: auto; padding: 28px; display: flex; flex-direction: column; gap: 16px; }
-.chat-empty { margin: auto; text-align: center; animation: fadeInUp 0.6s ease; }
+/* Conversation List */
+.conversation-list { flex: 1; overflow-y: auto; padding: 8px 16px 16px; }
+.conv-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; margin-bottom: 4px;
+    border-radius: var(--radius-md);
+    background: transparent; border: 1px solid transparent;
+    cursor: pointer; transition: var(--transition-fast);
+}
+.conv-item:hover { background: var(--bg-glass-light); border-color: var(--border-color); }
+.conv-item.active { background: var(--accent-soft); border-color: var(--border-hover); }
+.conv-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text-muted); flex-shrink: 0; transition: var(--transition-fast);
+}
+.conv-item.active .conv-dot { background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+.conv-info { flex: 1; min-width: 0; }
+.conv-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conv-preview { font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.conv-actions { display: flex; gap: 4px; opacity: 0; transition: var(--transition-fast); }
+.conv-item:hover .conv-actions { opacity: 1; }
+.conv-btn {
+    width: 28px; height: 28px; border-radius: var(--radius-sm);
+    border: none; background: transparent; color: var(--text-muted);
+    cursor: pointer; display: grid; place-items: center; font-size: 14px;
+    transition: var(--transition-fast);
+}
+.conv-btn:hover { background: var(--danger); color: white; border-radius: 50%; }
+
+/* Sidebar Footer */
+.sidebar-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color);
+    display: flex; gap: 8px;
+}
+.btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 16px; border-radius: var(--radius-md);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--border-color); background: var(--bg-glass);
+    color: var(--text-primary); transition: var(--transition-fast);
+    flex: 1; white-space: nowrap;
+}
+.btn:hover { background: var(--bg-glass-light); border-color: var(--border-hover); transform: translateY(-1px); }
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    color: white; border: none;
+    box-shadow: 0 2px 8px var(--accent-glow);
+}
+.btn-primary:hover { box-shadow: 0 4px 12px var(--accent-glow); }
+
+/* ===== MAIN CONTENT ===== */
+.main-content { flex: 1; display: flex; flex-direction: column; position: relative; }
+
+/* Header */
+.main-header {
+    padding: 16px 24px;
+    background: var(--bg-glass);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-bottom: 1px solid var(--border-color);
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.header-left h2 { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+.header-left p { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.status-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: var(--radius-full);
+    background: var(--bg-glass); border: 1px solid var(--border-color);
+    font-size: 11px; font-weight: 600;
+}
+.status-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);
+}
+.status-badge.listening .status-dot {
+    background: var(--accent);
+    animation: pulse 2s infinite;
+    box-shadow: 0 0 8px var(--accent-glow);
+}
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } }
+
+/* ===== CHAT AREA ===== */
+.chat-area {
+    flex: 1; overflow-y: auto; padding: 24px;
+    display: flex; flex-direction: column; gap: 16px;
+}
+.chat-empty { margin: auto; text-align: center; animation: fadeInUp 0.5s ease; }
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-.chat-empty-icon { font-size: 64px; margin-bottom: 20px; animation: float 3s ease-in-out infinite; }
-@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-.chat-empty h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
-.chat-empty p { color: var(--text-secondary); font-size: 14px; max-width: 400px; }
+.chat-empty-icon { font-size: 56px; margin-bottom: 16px; animation: float 4s ease-in-out infinite; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+.chat-empty h3 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+.chat-empty p { color: var(--text-secondary); font-size: 13px; max-width: 380px; line-height: 1.5; }
 
 /* Messages */
-.message { display: flex; gap: 14px; max-width: 80%; animation: messageSlide 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-@keyframes messageSlide { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.message {
+    display: flex; gap: 12px; max-width: 80%;
+    animation: msgSlide 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes msgSlide { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .message.user { align-self: flex-end; flex-direction: row-reverse; }
 .message.ai { align-self: flex-start; }
-.message-avatar {
-    width: 36px; height: 36px; border-radius: var(--radius-md); display: grid; place-items: center;
-    font-size: 18px; flex-shrink: 0; position: relative;
+.msg-avatar {
+    width: 32px; height: 32px; border-radius: var(--radius-md);
+    display: grid; place-items: center; font-size: 14px;
+    flex-shrink: 0; position: relative;
+    box-shadow: var(--shadow-sm);
 }
-.message.user .message-avatar { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); box-shadow: 0 4px 12px var(--primary-glow); }
-.message.ai .message-avatar { background: linear-gradient(135deg, var(--accent), var(--accent-hover)); box-shadow: 0 4px 12px var(--accent-glow); }
-.message-bubble { padding: 14px 18px; border-radius: var(--radius-lg); font-size: 14px; line-height: 1.6; position: relative; }
-.message.user .message-bubble { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); color: white; border-bottom-right-radius: 4px; box-shadow: 0 4px 16px var(--primary-glow); }
-.message.ai .message-bubble { background: var(--bg-card); backdrop-filter: blur(10px); border: 1px solid var(--border-color); border-bottom-left-radius: 4px; box-shadow: var(--shadow-md); }
-.message-time { font-size: 11px; color: var(--text-muted); margin-top: 6px; opacity: 0.7; }
+.message.user .msg-avatar { background: linear-gradient(135deg, var(--primary), var(--purple)); }
+.message.ai .msg-avatar { background: linear-gradient(135deg, var(--accent), var(--primary)); }
+.msg-bubble {
+    padding: 12px 16px; border-radius: var(--radius-lg);
+    font-size: 14px; line-height: 1.6;
+    box-shadow: var(--shadow-sm);
+}
+.message.user .msg-bubble {
+    background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+    color: white; border-bottom-right-radius: 4px;
+}
+.message.ai .msg-bubble {
+    background: var(--bg-glass); border: 1px solid var(--border-color);
+    border-bottom-left-radius: 4px;
+}
+.msg-time { font-size: 10px; color: var(--text-muted); margin-top: 4px; opacity: 0.6; }
 
 /* Typing Indicator */
-.typing-indicator { display: flex; gap: 6px; padding: 4px 0; }
-.typing-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: typingBounce 1.4s infinite; }
-.typing-dot:nth-child(2) { animation-delay: 0.2s; }
-.typing-dot:nth-child(3) { animation-delay: 0.4s; }
-@keyframes typingBounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-8px); opacity: 1; } }
-
-/* Sound Wave Animation */
-.sound-wave { display: none; align-items: center; gap: 3px; height: 24px; padding: 0 16px; }
-.sound-wave.active { display: flex; }
-.sound-bar { width: 3px; height: 100%; background: var(--accent); border-radius: var(--radius-full); animation: soundWave 1s ease-in-out infinite; }
-.sound-bar:nth-child(1) { animation-delay: 0s; } .sound-bar:nth-child(2) { animation-delay: 0.1s; }
-.sound-bar:nth-child(3) { animation-delay: 0.2s; } .sound-bar:nth-child(4) { animation-delay: 0.3s; }
-.sound-bar:nth-child(5) { animation-delay: 0.4s; }
-@keyframes soundWave { 0%, 100% { transform: scaleY(0.3); opacity: 0.3; } 50% { transform: scaleY(1); opacity: 1; } }
-
-/* Input Area */
-.input-area { padding: 20px 28px; background: var(--bg-card); backdrop-filter: blur(20px); border-top: 1px solid var(--border-color); }
-.input-container { display: flex; gap: 12px; align-items: center; max-width: 900px; margin: 0 auto; }
-.input-field {
-    flex: 1; padding: 16px 20px; background: var(--bg-glass); border: 1px solid var(--border-color);
-    border-radius: var(--radius-full); color: var(--text-primary); font-size: 15px; font-weight: 500;
-    outline: none; transition: all 0.2s;
+.typing-indicator { display: flex; gap: 5px; padding: 4px 0; }
+.typing-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+    animation: typingBounce 1.2s infinite;
 }
-.input-field:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); background: var(--bg-secondary); }
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typingBounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }
+
+/* Sound Wave */
+.sound-wave { display: none; align-items: center; gap: 2px; height: 20px; padding: 0 12px; }
+.sound-wave.active { display: flex; }
+.sound-bar {
+    width: 2px; height: 100%; background: var(--accent);
+    border-radius: var(--radius-full);
+    animation: soundWave 0.8s ease-in-out infinite;
+}
+.sound-bar:nth-child(1) { animation-delay: 0s; }
+.sound-bar:nth-child(2) { animation-delay: 0.1s; }
+.sound-bar:nth-child(3) { animation-delay: 0.2s; }
+.sound-bar:nth-child(4) { animation-delay: 0.3s; }
+.sound-bar:nth-child(5) { animation-delay: 0.4s; }
+@keyframes soundWave { 0%, 100% { transform: scaleY(0.3); opacity: 0.4; } 50% { transform: scaleY(1); opacity: 1; } }
+
+/* ===== INPUT AREA ===== */
+.input-area {
+    padding: 16px 24px 20px;
+    background: var(--bg-glass);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-top: 1px solid var(--border-color);
+}
+.input-container { display: flex; gap: 10px; align-items: center; max-width: 900px; margin: 0 auto; }
+.input-field {
+    flex: 1; padding: 12px 18px;
+    border-radius: var(--radius-full); border: 1px solid var(--border-color);
+    background: var(--bg-glass-light);
+    color: var(--text-primary); font-size: 14px; font-weight: 400;
+    outline: none; transition: var(--transition-fast);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+}
+.input-field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow), inset 0 1px 2px rgba(0,0,0,0.05); }
 .input-field::placeholder { color: var(--text-muted); }
 .send-btn {
-    width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-hover));
-    border: none; color: white; font-size: 20px; cursor: pointer; display: grid; place-items: center;
-    box-shadow: 0 4px 16px var(--accent-glow); transition: all 0.2s; flex-shrink: 0;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    border: none; color: white; font-size: 18px;
+    cursor: pointer; display: grid; place-items: center;
+    box-shadow: 0 2px 8px var(--accent-glow);
+    transition: var(--transition-fast); flex-shrink: 0;
 }
-.send-btn:hover { transform: scale(1.05); box-shadow: 0 8px 24px var(--accent-glow); }
+.send-btn:hover { transform: scale(1.05); box-shadow: 0 4px 12px var(--accent-glow); }
 .send-btn:active { transform: scale(0.95); }
-.send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.send-btn:disabled { opacity: 0.5; cursor: default; box-shadow: none; transform: none; }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: var(--radius-full); }
-::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+/* Image Preview */
+.image-preview {
+    display: none; padding: 8px 24px 0;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+}
+.image-preview-inner { max-width: 900px; margin: 0 auto; padding-top: 8px; }
+.preview-wrapper { position: relative; display: inline-block; }
+.preview-img { height: 56px; border-radius: var(--radius-md); border: 1px solid var(--border-color); }
+.preview-close {
+    position: absolute; top: -6px; right: -6px;
+    background: var(--danger); color: white; border: none;
+    border-radius: 50%; width: 18px; height: 18px;
+    cursor: pointer; font-size: 10px;
+    display: grid; place-items: center;
+    box-shadow: var(--shadow-sm);
+}
 
-/* Mobile */
+/* ===== MOBILE RESPONSIVE ===== */
 @media (max-width: 1024px) {
-    .sidebar { position: fixed; left: 0; top: 0; height: 100%; transform: translateX(-100%); box-shadow: var(--shadow-xl); }
+    .app-container { margin: 0; }
+    .sidebar {
+        position: fixed; left: 0; top: 0; height: 100%;
+        transform: translateX(-105%);
+        box-shadow: var(--shadow-xl);
+    }
     .sidebar.open { transform: translateX(0); }
+    body.sidebar-open::before {
+        content: ""; position: fixed; inset: 0;
+        background: rgba(0, 0, 0, 0.6); z-index: 50;
+        backdrop-filter: blur(2px);
+    }
     .mobile-menu-btn { display: grid !important; }
+    .header-right { gap: 6px; }
     .nav-pill span { display: none; }
+    .message { max-width: 85%; }
 }
 @media (max-width: 768px) {
-    .chat-area { padding: 20px 16px; } .input-area { padding: 16px; }
-    .message { max-width: 90%; } .header-left h2 { font-size: 18px; }
+    .main-header { padding: 12px 16px; }
+    .chat-area { padding: 16px; }
+    .input-area { padding: 12px 16px 16px; }
+    .header-left h2 { font-size: 16px; }
+    .sidebar { width: 280px; }
 }
 .mobile-menu-btn {
-    display: none; width: 40px; height: 40px; border-radius: var(--radius-md);
-    border: 1px solid var(--border-color); background: var(--bg-glass); color: var(--text-primary);
-    font-size: 20px; cursor: pointer; place-items: center;
+    display: none; width: 36px; height: 36px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: var(--bg-glass); color: var(--text-primary);
+    font-size: 18px; cursor: pointer; place-items: center;
 }
 </style>
 
 </head>
 
 <body>
-<div class="bg-mesh"></div>
-<div class="orb orb-1"></div>
-<div class="orb orb-2"></div>
-<div class="orb orb-3"></div>
+<div class="bg-mesh">
+    <div class="bg-gradient"></div>
+    <div class="bg-grid"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+</div>
 
 <div class="app-container">
-    <!-- Sidebar -->
+    <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="brand">
                 <div class="brand-icon">✦</div>
                 <div class="brand-text">
                     <h1>Smart Assistant</h1>
-                    <span>AI • Goals • Habits • Voice</span>
+                    <span>AI • Voice • Goals • Tasks</span>
                 </div>
             </div>
         </div>
 
-        <div class="sidebar-actions">
-            <button class="btn btn-primary" onclick="newChat()">
-                <span>＋</span> New Chat
-            </button>
-            <button class="btn btn-ghost" id="voice-btn" onclick="toggleVoice()">
-                <span>🎙️</span> Start Voice
-            </button>
-        </div>
-
-        <input class="sidebar-search" id="search-input" type="text" placeholder="🔍 Search conversations...">
-
         <div class="sidebar-section">
             <div class="sidebar-section-title">Quick Links</div>
-            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                <a href="/student/" class="nav-pill">🎓 <span>Student</span></a>
-                <a href="/tasks/" class="nav-pill">✅ <span>Tasks</span></a>
-                <a href="/habits/" class="nav-pill">📊 <span>Habits</span></a>
-                <a href="/goals/" class="nav-pill">🎯 <span>Goals</span></a>
-                <a href="/history/" class="nav-pill">📜 <span>History</span></a>
-                <a href="/media/" class="nav-pill">🎵 <span>Media</span></a>
+            <div class="quick-links">
+                <a href="/student/" class="nav-pill">🎓 Student</a>
+                <a href="/tasks/" class="nav-pill">✅ Tasks</a>
+                <a href="/habits/" class="nav-pill">📊 Habits</a>
+                <a href="/goals/" class="nav-pill">🎯 Goals</a>
+                <a href="/history/" class="nav-pill">📜 History</a>
+                <a href="/media/" class="nav-pill">🎵 Media</a>
             </div>
         </div>
 
         <div class="conversation-list" id="conversation-list"></div>
+
+        <div class="sidebar-footer">
+            <button class="btn btn-primary" onclick="newChat()"><span>＋</span> New</button>
+            <button class="btn" id="voice-btn" onclick="toggleVoice()"><span>🎙️</span> Voice</button>
+        </div>
     </aside>
 
-    <!-- Main -->
+    <!-- MAIN -->
     <main class="main-content">
         <header class="main-header">
             <div style="display:flex; align-items:center; gap:12px;">
@@ -353,9 +516,9 @@ body {
                     <div class="status-dot"></div>
                     <span>Idle</span>
                 </div>
-                <button id="wake-word-toggle" class="btn btn-ghost" onclick="toggleWakeWordMode()" title="Toggle Wake Word Mode">👁️ Wake Word: OFF</button>
-                <button id="agent-toggle-btn" class="btn btn-ghost" onclick="toggleAgent()" title="Toggle Agent Mode">🤖 Agent: OFF</button>
-                <button class="btn btn-ghost" onclick="toggleTheme()" style="padding:10px 14px;">🌙</button>
+                <button id="wake-word-toggle" class="btn" onclick="toggleWakeWordMode()" style="padding:8px 12px; font-size:12px;">👁️ Wake Word</button>
+                <button id="agent-toggle-btn" class="btn" onclick="toggleAgent()" style="padding:8px 12px; font-size:12px;">🤖 Agent</button>
+                <button class="btn" onclick="toggleTheme()" style="padding:8px 12px; font-size:14px;">🌙</button>
             </div>
         </header>
 
@@ -364,18 +527,16 @@ body {
         <div class="input-area">
             <div class="input-container">
                 <input class="input-field" id="input" type="text" placeholder="Type your message or use voice input...">
-                
-                <!-- Camera Input (Hidden) -->
                 <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none">
-                
                 <button class="send-btn" id="camera-btn" onclick="document.getElementById('camera-input').click()" title="Take Photo">📷</button>
                 <button class="send-btn" onclick="sendMessage()">➤</button>
             </div>
-            <!-- Image Preview Container -->
-            <div id="image-preview" style="display:none; padding: 8px 28px; background: var(--bg-secondary); border-top: 1px solid var(--border-color);">
-                <div style="position:relative; display:inline-block;">
-                    <img id="preview-img" src="" style="height: 60px; border-radius: 8px; border: 1px solid var(--border-color);">
-                    <button onclick="clearImage()" style="position:absolute; top:-8px; right:-8px; background:var(--danger); color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; font-size:12px;">×</button>
+            <div class="image-preview" id="image-preview">
+                <div class="image-preview-inner">
+                    <div class="preview-wrapper">
+                        <img id="preview-img" src="" class="preview-img">
+                        <button class="preview-close" onclick="clearImage()">×</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -383,262 +544,55 @@ body {
 </div>
 
 <script>
-// Global Speech State
-let isSpeaking = false;
-let selectedVoice = null;
-let speechBuffer = "";
-let watchdogInterval = null;
-let streamFinished = false; // Flag to know when to flush incomplete sentences
-
-// Load voices and pick the MOST NATURAL one available
-function initVoice() {
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length === 0) return;
-
-    console.log(`🔊 Found ${voices.length} voices. Selecting best one...`);
-
-    // 1. Try to find "Google US English"
-    let bestVoice = voices.find(v => v.name.includes("Google") && v.lang === "en-US");
-
-    // 2. Try to find any "Google" English voice
-    if (!bestVoice) {
-        bestVoice = voices.find(v => v.name.includes("Google") && v.lang.startsWith('en'));
-    }
-
-    // 3. Try to find "Microsoft" English voice
-    if (!bestVoice) {
-        bestVoice = voices.find(v => v.name.includes("Microsoft") && v.lang.startsWith('en'));
-    }
-
-    // 4. Fallback to any English voice
-    if (!bestVoice) {
-        bestVoice = voices.find(v => v.lang.startsWith('en'));
-    }
-    
-    // 5. Absolute fallback
-    if (!bestVoice && voices.length > 0) {
-        bestVoice = voices[0];
-    }
-
-    if (bestVoice) {
-        selectedVoice = bestVoice;
-        console.log(`✅ Selected Voice: ${selectedVoice.name} (${selectedVoice.lang})`);
-    } else {
-        console.warn("⚠️ No suitable voice found.");
-    }
-}
-
-// Initialize voices (they load asynchronously)
-window.speechSynthesis.onvoiceschanged = initVoice;
-initVoice(); // Try immediately just in case
-
-// FIX: Chrome "Speech Hang" Watchdog
-// This keeps the voice engine alive during long stories by pausing/resuming every 5s
-function startWatchdog() {
-    if (watchdogInterval) return;
-    console.log("🐕 Watchdog started.");
-    watchdogInterval = setInterval(() => {
-        // If speech is active, force a pause/resume cycle to prevent the browser from going silent
-        if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
-            window.speechSynthesis.pause();
-            window.speechSynthesis.resume();
-        }
-        // If it's paused, resume it
-        else if (window.speechSynthesis.paused) {
-            window.speechSynthesis.resume();
-        }
-    }, 6000); // Every 6 seconds
-}
-
-function stopWatchdog() {
-    if (watchdogInterval) {
-        clearInterval(watchdogInterval);
-        watchdogInterval = null;
-    }
-    console.log("🛑 Watchdog stopped.");
-}
-
-// Speak the next sentence in the buffer
-function speakNextSentence() {
-    // MUTEX: Prevent double-firing (Race Condition Fix)
-    // If we are already locked or the browser is speaking, stop.
-    // This prevents the "two times" bug where the loop and the callback trigger simultaneously.
-    if (isSpeakingLocked || window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-        return;
-    }
-
-    // Clean up text for speech
-    let cleanBuffer = speechBuffer
-        .replace(/\*\*/g, '') // Bold
-        .replace(/\*/g, '')   // Italic
-        .replace(/__/g, '')   // Underline
-        .replace(/`/g, '')    // Code
-        .replace(/#/g, '')    // Headers
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Links -> Just text
-        .replace(/https?:\/\/\S+/g, 'link') // URLs -> "link"
-        .trim();
-
-    speechBuffer = cleanBuffer; // Update global buffer
-
-    if (!speechBuffer) {
-        // If buffer is empty, check if we are done
-        if (streamFinished) {
-            stopWatchdog();
-            isSpeaking = false;
-            console.log("✅ Speech complete.");
-        }
-        return;
-    }
-
-    // Find the first sentence
-    // Regex explanation:
-    // ^(.*?[.!?]+) -> Match up to punctuation
-    // [\s\n]*     -> Consume trailing whitespace/newlines
-    const sentenceMatch = speechBuffer.match(/^(.*?[.!?]+)\s*/);
-
-    let sentenceToSpeak = "";
-
-    if (sentenceMatch) {
-        sentenceToSpeak = sentenceMatch[1].trim();
-        // Remove the spoken part from the buffer IMMEDIATELY to prevent re-reading
-        speechBuffer = speechBuffer.substring(sentenceMatch[0].length);
-    } else if (streamFinished) {
-        // If stream is finished and no punctuation, speak the rest
-        sentenceToSpeak = speechBuffer;
-        speechBuffer = ""; // Clear buffer immediately
-    } else {
-        // Waiting for more text to form a sentence
-        return;
-    }
-
-    if (!sentenceToSpeak.trim()) {
-        speakNextSentence(); // Retry with remaining buffer
-        return;
-    }
-
-    console.log(`🗣️ Speaking: "${sentenceToSpeak.substring(0, 30)}..."`);
-
-    // LOCK: Mark as active immediately to block other calls
-    isSpeakingLocked = true;
-    lastAiSpeechTime = Date.now(); // Track when AI starts speaking
-
-    // Chrome Bug Fix: Sometimes the speech queue gets "stuck"
-    if (window.speechSynthesis.pending && !window.speechSynthesis.speaking) {
-        console.log("⚠️ Speech queue stuck. Resetting...");
-        window.speechSynthesis.cancel();
-    }
-
-    // Create utterance
-    const utterance = new SpeechSynthesisUtterance(sentenceToSpeak);
-    if (selectedVoice) utterance.voice = selectedVoice;
-
-    // Use the global assistantVolume setting
-    utterance.volume = assistantVolume;
-
-    // Natural settings
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-
-    // When this sentence finishes, UNLOCK and speak the next one
-    utterance.onend = () => {
-        isSpeakingLocked = false;
-        console.log("🔓 Unlocked. Checking for more text...");
-        speakNextSentence();
-    };
-
-    utterance.onerror = (event) => {
-        console.warn("⚠️ Speech error:", event.error);
-        isSpeakingLocked = false; // Unlock on error
-        // Try to recover and speak the next sentence
-        speakNextSentence();
-    };
-
-    // Add to system queue
-    window.speechSynthesis.speak(utterance);
-    isSpeaking = true;
-}
-
-// Handle stopping
-function stopAllSpeech() {
-    stopWatchdog(); // Stop the background fix
-    window.speechSynthesis.cancel();
-    speechBuffer = "";
-    streamFinished = false;
-    isSpeaking = false;
-}
-
-// State
+// ===== STATE =====
 let currentConv = null;
 let recognition = null;
 let isListening = false;
 let allConversations = [];
 let timerSeq = 0;
 let lastAiSpeechTime = 0;
-let isSpeakingLocked = false; // Mutex to prevent double-speaking
-let assistantVolume = 1.0; // 0.0 to 1.0
+let isSpeakingLocked = false;
+let assistantVolume = 1.0;
+let autonomousMode = false;
+let capturedImage = null;
 const activeTimers = new Map();
-
-// Wake Word Configuration
 const WAKE_WORDS = ['hey assistant', 'hey ai', 'jarvis', 'computer', 'siri', 'alexa'];
-let wakeWordMode = false; // Toggle this to enable Wake Word mode
+let wakeWordMode = false;
+let continuousMode = false;
+let micResumeInterval = null;
 
-// Initialize
+// ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
     loadConversations();
     setEmptyState();
     const savedConv = localStorage.getItem('lastConvId');
     if (savedConv) loadConversation(savedConv);
-    
     const input = document.getElementById('input');
     if (input) {
-        input.addEventListener('keydown', e => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
+        input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }});
     }
-    
     const searchInput = document.getElementById('search-input');
     if (searchInput) searchInput.addEventListener('input', () => renderConversationList());
 });
 
-// Theme Toggle
+// ===== THEME =====
 function toggleTheme() {
     const current = document.body.getAttribute('data-theme') || 'dark';
     const next = current === 'light' ? 'dark' : 'light';
     document.body.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
 }
+(function applyTheme() { const saved = localStorage.getItem('theme'); if (saved) document.body.setAttribute('data-theme', saved); })();
 
-// Wake Word Toggle
-function toggleWakeWordMode() {
-    wakeWordMode = !wakeWordMode;
-    const btn = document.getElementById('wake-word-toggle');
-    if (btn) {
-        btn.textContent = wakeWordMode ? '👁️ Wake Word: ON' : '👁️ Wake Word: OFF';
-        btn.style.opacity = wakeWordMode ? '1' : '0.5';
-        btn.style.background = wakeWordMode ? 'var(--accent-soft)' : '';
-    }
-    console.log(wakeWordMode ? "✅ Wake Word Mode Enabled" : "❌ Wake Word Mode Disabled");
-}
+// ===== SIDEBAR =====
+function toggleSidebar() { document.body.classList.toggle('sidebar-open'); document.getElementById('sidebar').classList.toggle('open'); }
+document.addEventListener('click', e => { if (document.body.classList.contains('sidebar-open') && !document.getElementById('sidebar').contains(e.target) && window.innerWidth <= 1024) { toggleSidebar(); }});
 
-(function applyTheme() {
-    const saved = localStorage.getItem('theme');
-    if (saved) document.body.setAttribute('data-theme', saved);
-})();
-
-function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
-
+// ===== CHAT STATE =====
 function setEmptyState() {
     const chat = document.getElementById('chat');
     if (chat.children.length === 0) {
-        chat.innerHTML = `
-            <div class="chat-empty">
-                <div class="chat-empty-icon">✦</div>
-                <h3>Welcome to Smart Assistant</h3>
-                <p>Try: <b>open youtube</b> • <b>play song shape of you</b> • <b>I want to learn Python</b></p>
-            </div>`;
+        chat.innerHTML = `<div class="chat-empty"><div class="chat-empty-icon">✦</div><h3>Welcome</h3><p>Try: <b>open youtube</b> • <b>play song</b> • <b>I want to learn Python</b> • <b>Add task buy groceries</b></p></div>`;
     }
 }
 function clearEmptyState() { const empty = document.querySelector('.chat-empty'); if (empty) empty.remove(); }
@@ -649,9 +603,8 @@ function addUserMessage(text) {
     const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     const div = document.createElement('div');
     div.className = 'message user';
-    div.innerHTML = `<div class="message-avatar">👤</div><div><div class="message-bubble">${escapeHtml(text)}</div><div class="message-time">${time}</div></div>`;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
+    div.innerHTML = `<div class="msg-avatar">👤</div><div><div class="msg-bubble">${escapeHtml(text)}</div><div class="msg-time">${time}</div></div>`;
+    chat.appendChild(div); chat.scrollTop = chat.scrollHeight;
 }
 
 function addAIMessage(text) {
@@ -662,734 +615,149 @@ function addAIMessage(text) {
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--accent);text-decoration:underline;">$1</a>');
     const div = document.createElement('div');
     div.className = 'message ai';
-    div.innerHTML = `<div class="message-avatar">✦</div><div><div class="message-bubble">${html}</div><div class="message-time">${time}</div></div>`;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
+    div.innerHTML = `<div class="msg-avatar">✦</div><div><div class="msg-bubble">${html}</div><div class="msg-time">${time}</div></div>`;
+    chat.appendChild(div); chat.scrollTop = chat.scrollHeight;
 }
 
-// Send Message (Streaming Version)
-async function sendMessage() {
-    const input = document.getElementById('input');
-    const text = input.value.trim();
-    if (!text) return;
-
-    // Stop any ongoing speech before starting new message
-    stopAllSpeech();
-    speechQueue = [];
-    isSpeaking = false;
-
-    input.value = '';
-    addUserMessage(text);
-    
-    // Create AI message bubble for streaming
-    const chat = document.getElementById('chat');
-    const aiDiv = document.createElement('div');
-    aiDiv.className = 'message ai';
-    aiDiv.innerHTML = `
-        <div class="message-avatar">✦</div>
-        <div>
-            <div class="message-bubble" id="streaming-bubble"></div>
-            <div class="message-time"></div>
-        </div>
-    `;
-    chat.appendChild(aiDiv);
-    chat.scrollTop = chat.scrollHeight;
-    const bubble = aiDiv.querySelector('.message-bubble');
-    bubble.innerHTML = '<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
-
-    // Instant open for songs/search
-    const songMatch = text.match(/^(?:play|search|find|open)\s+(?:song|music|video|on youtube)?\s+(.+)$/i);
-    if (songMatch && songMatch[1].trim().length > 1) {
-        const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(songMatch[1].trim())}`;
-        window.open(url, '_blank');
-    }
-
-    try {
-        const response = await fetch('/chat-stream-api/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({message: text, conv_id: currentConv})
-        });
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let fullText = '';
-        speechBuffer = ""; // Reset global buffer
-        streamFinished = false;
-        isSpeaking = true;
-        startWatchdog(); // Start watchdog immediately
-
-        while (true) {
-            const {done, value} = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value, {stream: true});
-            buffer += chunk;
-
-            const lines = buffer.split('\n');
-            buffer = lines.pop();
-
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    try {
-                        const data = JSON.parse(line.slice(6));
-
-                        if (data.token) {
-                            if (fullText.length === 0) bubble.innerHTML = '';
-                            fullText += data.token;
-                            bubble.innerHTML = fullText.replace(/\n/g, '<br>').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-                            chat.scrollTop = chat.scrollHeight;
-
-                            // Just add text to the buffer. The recursive function will pick it up.
-                            speechBuffer += data.token;
-                        } else if (data.response) {
-                            // Handle immediate response (e.g., "Opening YouTube") from auto commands
-                            // OR the final chunk of a stream which contains the full response.
-                            
-                            // CRITICAL FIX: Only append to speechBuffer if we haven't streamed tokens yet.
-                            // If fullText > 0, speechBuffer already contains the text from tokens.
-                            // Appending data.response here would cause the assistant to speak the whole text TWICE.
-                            if (fullText.length === 0) {
-                                speechBuffer += data.response;
-                                bubble.innerHTML = ''; // Clear typing indicator if present
-                            }
-                            
-                            // Update fullText if empty
-                            if (fullText.length === 0) {
-                                fullText = data.response;
-                                bubble.innerHTML = fullText.replace(/\n/g, '<br>').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-                                chat.scrollTop = chat.scrollHeight;
-                            }
-                        }
-
-                        // Check for actions (like opening websites or timers)
-                        if (data.action) {
-                            if (data.action.type === 'open_url') {
-                                console.log("🌐 Opening URL:", data.action.url);
-                                window.open(data.action.url, '_blank');
-                            } else if (data.action.type === 'set_timer') {
-                                console.log("⏱️ Setting timer:", data.action.seconds, data.action.label);
-                                startTimer(data.action.seconds, data.action.label);
-                            } else if (data.action.type === 'refresh_tasks') {
-                                console.log("✅ Task updated.");
-                            } else if (data.action.type === 'refresh_student') {
-                                console.log("🎓 Student data updated.");
-                            } else if (data.action.type === 'adjust_volume') {
-                                handleVolumeChange(data.action.value);
-                            }
-                        }
-
-                        // Handle Agent Logs
-                        if (data.agent_log) {
-                            const log = document.getElementById('agent-log');
-                            if(log) {
-                                log.innerHTML += '<div>' + data.agent_log + '</div>';
-                                log.scrollTop = log.scrollHeight;
-                                document.getElementById('agent-status').textContent = 'Working...';
-                                setTimeout(() => { document.getElementById('agent-status').textContent = 'Idle'; }, 2000);
-                            }
-                        }
-
-                        if (data.done) {
-                            // Mark stream as finished so the recursive function speaks the last fragment
-                            streamFinished = true;
-                            console.log("📡 Stream finished. Flushing buffer...");
-                            
-                            // Trigger the final flush
-                            speakNextSentence();
-
-                            if (data.conv_id) {
-                                currentConv = data.conv_id;
-                                localStorage.setItem('lastConvId', currentConv);
-                                loadConversations();
-                            }
-                            if (data.detected_mood && data.detected_mood !== 'neutral') {
-                                const moodEmojis = { 'stressed': '😰', 'worried': '😟', 'sad': '😢', 'lonely': '😔', 'angry': '😠', 'happy': '😊', 'grateful': '🙏', 'tired': '😴', 'confused': '😕', 'hopeful': '🌟', 'scared': '😨', 'crisis': '🆘' };
-                                const moodEmoji = moodEmojis[data.detected_mood] || '';
-                                bubble.innerHTML += `<br><br><small style="opacity:0.6;">${moodEmoji} Mood: ${data.detected_mood}</small>`;
-                            }
-                        }
-                    } catch (e) {}
-                }
-            }
-            
-            // Trigger speech processing continuously as buffer fills
-            speakNextSentence();
-        }
-        
-        if (fullText.toLowerCase().includes("stopped!")) {
-            stopAllSpeech();
-            for (const [id, timer] of activeTimers.entries()) { clearTimeout(timer); activeTimers.delete(id); }
-        }
-
-    } catch (err) {
-        bubble.innerHTML = 'Error connecting to assistant';
-    }
-}
-
-// Conversations
+// ===== CONVERSATIONS =====
 function loadConversations() {
-    fetch('/conversations-api/').then(r => r.json()).then(data => {
-        allConversations = data.conversations || [];
-        renderConversationList();
-    }).catch(() => {});
+    fetch('/conversations-api/').then(r => r.json()).then(data => { allConversations = data.conversations || []; renderConversationList(); }).catch(() => {});
 }
-
 function renderConversationList() {
     const list = document.getElementById('conversation-list');
     const query = (document.getElementById('search-input')?.value || '').toLowerCase();
     const filtered = allConversations.filter(c => !query || (c.title || '').toLowerCase().includes(query));
     list.innerHTML = filtered.map(c => `
-        <div class="conversation-item ${c.id == currentConv ? 'active' : ''}" onclick="loadConversation(${c.id})">
-            <div class="conversation-indicator"></div>
-            <div class="conversation-info">
-                <div class="conversation-title">${escapeHtml(c.title || 'New Chat')}</div>
-                <div class="conversation-preview">${escapeHtml(c.preview || '')}</div>
-            </div>
-            <div class="conversation-actions">
-                <button class="conv-btn" onclick="event.stopPropagation(); deleteConversation(${c.id})">🗑</button>
-            </div>
-        </div>
-    `).join('');
+        <div class="conv-item ${c.id == currentConv ? 'active' : ''}" onclick="loadConversation(${c.id})">
+            <div class="conv-dot"></div>
+            <div class="conv-info"><div class="conv-title">${escapeHtml(c.title || 'New Chat')}</div><div class="conv-preview">${escapeHtml(c.preview || '')}</div></div>
+            <div class="conv-actions"><button class="conv-btn" onclick="event.stopPropagation(); deleteConversation(${c.id})">🗑</button></div>
+        </div>`).join('');
 }
-
 function loadConversation(id) {
-    currentConv = id;
-    localStorage.setItem('lastConvId', id);
-    renderConversationList();
+    currentConv = id; localStorage.setItem('lastConvId', id); renderConversationList();
     fetch(`/load-chat/?conv_id=${id}`).then(r => r.json()).then(data => {
-        const chat = document.getElementById('chat');
-        chat.innerHTML = '';
-        if (data.messages?.length) {
-            data.messages.forEach(m => {
-                if (m.message) addUserMessage(m.message);
-                if (m.response) addAIMessage(m.response);
-            });
-        } else { setEmptyState(); }
+        const chat = document.getElementById('chat'); chat.innerHTML = '';
+        if (data.messages?.length) { data.messages.forEach(m => { if (m.message) addUserMessage(m.message); if (m.response) addAIMessage(m.response); }); }
+        else { setEmptyState(); }
     });
 }
+function newChat() { currentConv = null; localStorage.removeItem('lastConvId'); document.getElementById('chat').innerHTML = ''; setEmptyState(); renderConversationList(); }
+async function deleteConversation(id) { if (!confirm('Delete this conversation?')) return; await fetch(`/delete-conversation/${id}/`, {method: 'POST'}); loadConversations(); if (currentConv == id) newChat(); }
 
-function newChat() {
-    currentConv = null;
-    localStorage.removeItem('lastConvId');
-    document.getElementById('chat').innerHTML = '';
-    setEmptyState();
-    renderConversationList();
+// ===== SPEECH ENGINE =====
+let speechBuffer = "";
+let streamFinished = false;
+let watchdogInterval = null;
+let selectedVoice = null;
+
+function initVoice() {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) return;
+    let bestVoice = voices.find(v => v.name.includes("Google") && v.lang === "en-US") || voices.find(v => v.lang.startsWith('en')) || voices[0];
+    if (bestVoice) { selectedVoice = bestVoice; console.log(`✅ Voice: ${selectedVoice.name}`); }
+}
+window.speechSynthesis.onvoiceschanged = initVoice;
+initVoice();
+
+function startWatchdog() {
+    if (watchdogInterval) return;
+    watchdogInterval = setInterval(() => { if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) { window.speechSynthesis.pause(); window.speechSynthesis.resume(); } else if (window.speechSynthesis.paused) { window.speechSynthesis.resume(); }}, 6000);
+}
+function stopWatchdog() { if (watchdogInterval) { clearInterval(watchdogInterval); watchdogInterval = null; } console.log("🛑 Watchdog stopped."); }
+
+function speakNextSentence() {
+    if (isSpeakingLocked || window.speechSynthesis.speaking || window.speechSynthesis.pending) return;
+    let cleanBuffer = speechBuffer.replace(/\*\*/g, '').replace(/\*/g, '').replace(/__/g, '').replace(/`/g, '').replace(/#/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/https?:\/\/\S+/g, 'link').trim();
+    speechBuffer = cleanBuffer;
+    if (!speechBuffer) { if (streamFinished) { stopWatchdog(); console.log("✅ Speech complete."); } return; }
+    const sentenceMatch = speechBuffer.match(/^(.*?[.!?]+)\s*/);
+    let sentenceToSpeak = "";
+    if (sentenceMatch) { sentenceToSpeak = sentenceMatch[1].trim(); speechBuffer = speechBuffer.substring(sentenceMatch[0].length); }
+    else if (streamFinished) { sentenceToSpeak = speechBuffer; speechBuffer = ""; }
+    else return;
+    if (!sentenceToSpeak.trim()) { speakNextSentence(); return; }
+    isSpeakingLocked = true; lastAiSpeechTime = Date.now();
+    if (window.speechSynthesis.pending && !window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); }
+    const utterance = new SpeechSynthesisUtterance(sentenceToSpeak);
+    if (selectedVoice) utterance.voice = selectedVoice;
+    utterance.volume = assistantVolume; utterance.rate = 1.0; utterance.pitch = 1.0;
+    utterance.onend = () => { isSpeakingLocked = false; speakNextSentence(); };
+    utterance.onerror = () => { isSpeakingLocked = false; speakNextSentence(); };
+    window.speechSynthesis.speak(utterance);
 }
 
-async function deleteConversation(id) {
-    if (!confirm('Delete this conversation?')) return;
-    await fetch(`/delete-conversation/${id}/`, {method: 'POST'});
-    loadConversations();
-    if (currentConv == id) newChat();
-}
+function stopAllSpeech() { stopWatchdog(); window.speechSynthesis.cancel(); speechBuffer = ""; streamFinished = false; isSpeaking = false; isSpeakingLocked = false; }
 
-// Voice
-let continuousMode = false;
-let micResumeInterval = null;
-
-function startContinuousCheck() {
-    if (micResumeInterval) clearInterval(micResumeInterval);
-    micResumeInterval = setInterval(() => {
-        if (continuousMode && !isListening) {
-            // Check if AI is silent and not pending more speech
-            const synth = window.speechSynthesis;
-            if (!synth.speaking && !synth.pending) {
-                console.log("🔄 AI is silent. Resuming mic...");
-                startVoice();
-            }
-        }
-    }, 1000);
-}
-
-function toggleVoice() {
-    console.log("🎙️ Toggle Voice clicked. isListening:", isListening);
-    // If we are already listening, stop.
-    // If we are NOT listening, ALWAYS start.
-    if (isListening) {
-        stopVoice();
-    } else {
-        startVoice();
-    }
-}
-
-function startVoice() {
-    console.log("🎙️ Attempting to start Voice...");
-
-    // 1. Check Browser Support
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-        alert("❌ Voice NOT supported in this browser.\n\nPlease use Google Chrome or Microsoft Edge.");
-        return;
-    }
-
-    // 2. Check Secure Context
-    if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        alert("⚠️ Voice Blocked!\n\nYour browser blocks the microphone on non-secure connections.\n\nPlease open this page at http://localhost:8000/ or https://");
-        return;
-    }
-
-    // 3. Abort old session if exists
-    if (recognition) {
-        try { recognition.abort(); } catch(e) {}
-        recognition = null;
-    }
-
-    // Create a NEW instance for this session
-    const myRec = new SpeechRecognition();
-    recognition = myRec; // Update global reference
-
-    myRec.continuous = true;
-    myRec.interimResults = false;
-    myRec.lang = 'en-US';
-    myRec.maxAlternatives = 1;
-
-    // Enable continuous mode
-    continuousMode = true;
-    if (micResumeInterval) clearInterval(micResumeInterval); // Clear any old interval
-
-    // 5. Event Handlers (Use myRec to capture this instance)
-    myRec.onstart = () => {
-        isListening = true;
-        updateVoiceUI(true);
-        console.log("✅✅✅ Microphone ACTIVE. Speak now...");
-        stopAllSpeech();
-    };
-
-    myRec.onresult = (event) => {
-        const lastIdx = event.results.length - 1;
-        const text = event.results[lastIdx][0].transcript;
-        const confidence = event.results[lastIdx][0].confidence;
-        console.log(`🗣️🗣️🗣️ Heard: "${text}" (${Math.round(confidence*100)}%)`);
-
-        // CRITICAL: Double-check to prevent feedback loop
-        // 1. Ignore if AI is currently talking (allows interruption)
-        if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-            console.log("⏸️ Ignoring result: AI is speaking.");
-            return;
-        }
-
-        // 2. Ignore if AI *just* stopped talking (prevents echo/loop)
-        // 1200ms cooldown after AI finishes a sentence
-        const timeSinceAiSpoke = Date.now() - lastAiSpeechTime;
-        if (timeSinceAiSpoke < 1200) {
-            console.log(`⏸️ Ignoring echo: AI spoke ${timeSinceAiSpoke}ms ago.`);
-            return;
-        }
-
-        // --- WAKE WORD LOGIC ---
-        if (wakeWordMode) {
-            const lowerText = text.toLowerCase().trim();
-            let wakeWordFound = null;
-            let command = "";
-
-            for (const word of WAKE_WORDS) {
-                if (lowerText.includes(word)) {
-                    wakeWordFound = word;
-                    // Extract command part after the wake word
-                    const parts = lowerText.split(word);
-                    if (parts.length > 1) {
-                        command = parts[parts.length - 1].trim();
-                    }
-                    break;
-                }
-            }
-
-            if (wakeWordFound) {
-                console.log(`✅ Wake Word Detected: "${wakeWordFound}"`);
-                if (command.length > 2) {
-                    // We have a command!
-                    document.getElementById('input').value = command;
-                    sendMessage();
-                } else {
-                    // Just the wake word was said
-                    console.log("👀 Listening for command...");
-                    // Visual feedback
-                    updateVoiceUI(false);
-                    setTimeout(() => { if(isListening) updateVoiceUI(true); }, 500);
-                    // Optional: AI could acknowledge, but risky for feedback loop.
-                    // addAIMessage("Listening..."); 
-                }
-            } else {
-                console.log(`⏳ Waiting for wake word... (Heard: "${text}")`);
-                // No action, keep listening
-            }
-            return; // Handled in wake word mode
-        }
-        // -----------------------
-
-        if (text && text.trim().length > 0) {
-            console.log("📝 Processing result...");
-
-            // Flash UI to show we heard something
-            updateVoiceUI(false);
-            setTimeout(() => { if(isListening) updateVoiceUI(true); }, 300);
-
-            document.getElementById('input').value = text;
-            sendMessage();
-            // Mic stays on!
-        }
-    };
-
-    myRec.onerror = (event) => {
-        console.error("❌❌❌ Mic Error:", event.error);
-        if (event.error === 'not-allowed') {
-            alert("🚫 Microphone Blocked!\n\nClick the 🔒 Lock Icon in the address bar and allow Microphone access.");
-            stopVoice();
-        } else if (event.error === 'network') {
-            console.log("🌐 Network Error. Mic will restart in 3 seconds...");
-            setTimeout(() => { if(continuousMode && recognition === myRec) restartMic(myRec); }, 3000);
-        } else if (event.error === 'no-speech') {
-            console.log("⏳ No speech detected. Mic will stay open...");
-        } else if (event.error === 'aborted') {
-            console.log("⏹️ Mic aborted.");
-        } else {
-            console.log("⚠️ Other mic error:", event.error);
-        }
-    };
-
-    myRec.onend = () => {
-        console.log("🛑 Mic session ended.");
-        
-        // If this is an old instance that was replaced, ignore it
-        if (recognition !== myRec) {
-            console.log("🗑️ Ignoring onend for old instance.");
-            return;
-        }
-
-        isListening = false;
-        updateVoiceUI(false);
-        
-        // If continuous mode is on, attempt to restart mic when AI is silent
-        if (continuousMode) {
-            console.log("🔄 Continuous mode active. Waiting for silence to restart...");
-            // Use a polling check to wait for AI to finish speaking
-            const checkAndRestart = setInterval(() => {
-                // If mode was turned off or instance changed, stop waiting
-                if (!continuousMode || recognition !== myRec) {
-                    clearInterval(checkAndRestart);
-                    return;
-                }
-
-                if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
-                    clearInterval(checkAndRestart);
-                    console.log("✅ AI silent. Restarting mic...");
-                    restartMic(myRec);
-                }
-            }, 500);
-        }
-    };
-
-    // 6. GO!
+// ===== SEND MESSAGE =====
+async function sendMessage() {
+    const input = document.getElementById('input'); const text = input.value.trim(); if (!text) return;
+    input.value = ''; addUserMessage(text); showTyping();
+    const songMatch = text.match(/^(?:play|search|find|open)\s+(?:song|music|video|on youtube)?\s+(.+)$/i);
+    if (songMatch && songMatch[1].trim().length > 1) { window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(songMatch[1].trim())}`, '_blank'); }
     try {
-        isListening = true;
-        myRec.start();
-        console.log("🎙️ recognition.start() called successfully.");
-    } catch(e) {
-        console.error("❌❌❌ Start failed:", e);
-        isListening = false;
-        updateVoiceUI(false);
-    }
+        const response = await fetch('/chat-stream-api/', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({message: text, conv_id: currentConv, autonomous: autonomousMode, image: capturedImage}) });
+        const reader = response.body.getReader(); const decoder = new TextDecoder(); let buffer = ''; let fullText = '';
+        speechBuffer = ""; streamFinished = false; isSpeaking = true; startWatchdog();
+        while (true) { const {done, value} = await reader.read(); if (done) break; const chunk = decoder.decode(value, {stream: true}); buffer += chunk; const lines = buffer.split('\n'); buffer = lines.pop(); for (const line of lines) { if (line.startsWith('data: ')) { try { const data = JSON.parse(line.slice(6)); if (data.token) { if (fullText.length === 0) hideTyping(); fullText += data.token; const bubble = document.getElementById('streaming-bubble'); if(bubble) { bubble.innerHTML = fullText.replace(/\n/g, '<br>').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); } document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight; speechBuffer += data.token; } else if (data.response) { if (fullText.length === 0) { speechBuffer += data.response; hideTyping(); if(!document.getElementById('streaming-bubble')) { const bubble = document.createElement('div'); bubble.id = 'streaming-bubble'; bubble.className = 'message ai'; bubble.innerHTML = `<div class="msg-avatar">✦</div><div><div class="msg-bubble"></div></div>`; document.getElementById('chat').appendChild(bubble); } document.querySelector('#streaming-bubble .msg-bubble').innerHTML = data.response.replace(/\n/g, '<br>'); fullText = data.response; } } if (data.action) { if (data.action.type === 'open_url') window.open(data.action.url, '_blank'); else if (data.action.type === 'set_timer') startTimer(data.action.seconds, data.action.label); else if (data.action.type === 'adjust_volume') handleVolumeChange(data.action.value); } if (data.agent_log) { const log = document.getElementById('agent-log'); if(log) { log.innerHTML += '<div>' + data.agent_log + '</div>'; log.scrollTop = log.scrollHeight; document.getElementById('agent-status').textContent = 'Working...'; setTimeout(() => { document.getElementById('agent-status').textContent = 'Idle'; }, 2000); } } if (data.done) { streamFinished = true; speakNextSentence(); if (data.conv_id) { currentConv = data.conv_id; localStorage.setItem('lastConvId', currentConv); loadConversations(); } if (data.detected_mood && data.detected_mood !== 'neutral') { const moodEmojis = { 'stressed': '😰', 'worried': '😟', 'sad': '😢', 'lonely': '😔', 'angry': '😠', 'happy': '😊', 'grateful': '🙏', 'tired': '😴', 'confused': '😕', 'hopeful': '🌟', 'scared': '😨', 'crisis': '🆘' }; const bubble = document.getElementById('streaming-bubble'); if(bubble) bubble.querySelector('.msg-bubble').innerHTML += `<br><br><small style="opacity:0.6;">${moodEmojis[data.detected_mood] || ''} Mood: ${data.detected_mood}</small>`; } } } catch (e) {} } } }
+    } catch (err) { hideTyping(); addAIMessage('Error connecting to assistant'); }
+    clearImage();
 }
+function showTyping() { clearEmptyState(); const chat = document.getElementById('chat'); const div = document.createElement('div'); div.className = 'message ai'; div.id = 'typing-indicator-msg'; div.innerHTML = `<div class="msg-avatar">✦</div><div><div class="msg-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div>`; chat.appendChild(div); chat.scrollTop = chat.scrollHeight; }
+function hideTyping() { const el = document.getElementById('typing-indicator-msg'); if (el) { el.remove(); const bubble = document.createElement('div'); bubble.className = 'message ai'; bubble.id = 'streaming-bubble'; bubble.innerHTML = `<div class="msg-avatar">✦</div><div><div class="msg-bubble"></div></div>`; document.getElementById('chat').appendChild(bubble); }}
 
-// Helper to safely restart the mic
-function restartMic(myRec) {
-    if (!continuousMode) {
-        console.log("🚫 Continuous mode is OFF. Not restarting.");
-        return;
-    }
-    
-    // If the instance was replaced, don't restart it
-    if (recognition !== myRec) {
-        console.log("🚫 Recognition instance changed. Not restarting old one.");
-        return;
-    }
+// ===== CAMERA =====
+document.getElementById('camera-input').addEventListener('change', function(event) { const file = event.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = function(e) { capturedImage = e.target.result; document.getElementById('preview-img').src = capturedImage; document.getElementById('image-preview').style.display = 'block'; }; reader.readAsDataURL(file); }});
+function clearImage() { capturedImage = null; document.getElementById('camera-input').value = ""; document.getElementById('image-preview').style.display = 'none'; }
 
-    console.log("🔄 Attempting to restart mic...");
+// ===== VOLUME =====
+function handleVolumeChange(value) { if (value === 'up') { assistantVolume = Math.min(1.0, assistantVolume + 0.2); addAIMessage(`🔊 Volume: ${Math.round(assistantVolume * 100)}%`); } else if (value === 'down') { assistantVolume = Math.max(0.0, assistantVolume - 0.2); addAIMessage(`🔉 Volume: ${Math.round(assistantVolume * 100)}%`); } else if (value === 'mute') { assistantVolume = 0.0; addAIMessage("🔇 Muted."); } else if (value === 'unmute') { assistantVolume = 1.0; addAIMessage("🔊 Unmuted."); } const status = document.getElementById('voice-status'); if (status && assistantVolume === 0) status.querySelector('span').textContent = "Muted"; else if (status) status.querySelector('span').textContent = isListening ? "Listening" : "Idle"; }
 
-    try {
-        // Try to start the existing object.
-        // Note: Browsers may block this if not triggered by user interaction.
-        myRec.start();
-        isListening = true;
-        updateVoiceUI(true);
-        console.log("🎙️ Mic restarted on existing instance.");
-    } catch(e) {
-        console.warn("⚠️ Restart on existing instance failed. Trying full re-init...", e);
-        
-        // Fallback: Try to start a completely new instance
-        // This helps if the old object is in a bad state
-        startVoice();
-        
-        // Check if startVoice actually succeeded
-        // startVoice sets isListening = true on success, false on failure
-        if (!isListening) {
-            console.error("❌❌❌ Auto-restart blocked by browser security.");
-            
-            // Show a visual notification in the chat
-            const chat = document.getElementById('chat');
-            const notification = document.createElement('div');
-            notification.className = 'message ai';
-            notification.style.background = '#ff4444'; // Red background for alert
-            notification.style.color = 'white';
-            notification.innerHTML = `
-                <div class="message-avatar">⚠️</div>
-                <div>
-                    <div class="message-bubble">
-                        <b>Listening Paused</b><br>
-                        Your browser blocked the auto-restart for security reasons.<br>
-                        <button onclick="startVoice()" style="margin-top:8px; padding:4px 8px; cursor:pointer;">Resume Listening</button>
-                    </div>
-                </div>
-            `;
-            chat.appendChild(notification);
-            chat.scrollTop = chat.scrollHeight;
-            
-            updateVoiceUI(false);
-        }
-    }
-}
+// ===== TIMER =====
+function startTimer(seconds, label) { const id = ++timerSeq; const timeoutId = setTimeout(() => { activeTimers.delete(id); addAIMessage(`⏰ ${label} finished!`); }, seconds * 1000); activeTimers.set(id, timeoutId); }
 
-function stopVoice() {
-    console.log("🛑 stopVoice called.");
-    isListening = false;
-    continuousMode = false; // Disable continuous mode
-    if (micResumeInterval) {
-        clearInterval(micResumeInterval);
-        micResumeInterval = null;
-    }
-    updateVoiceUI(false);
-
-    if (recognition) {
-        try {
-            recognition.stop();
-            console.log("🛑 Mic stopped gracefully.");
-        } catch(e) {
-            console.log("⚠️ Mic stop error:", e);
-        }
-        recognition = null;
-    }
-}
-
-// Complete speech stop - clears queue and stops all speech synthesis
-function stopAllSpeech() {
-    stopWatchdog(); // Stop the background fix
-    window.speechSynthesis.cancel();
-    speechBuffer = "";
-    isSpeaking = false;
-}
-
-function updateVoiceUI(listening) {
-    const btn = document.getElementById('voice-btn');
-    const status = document.getElementById('voice-status');
-    const wave = document.getElementById('sound-wave');
-    if (listening) {
-        btn.innerHTML = '<span>⏹</span> Stop Voice';
-        status.className = 'status-badge listening';
-        status.querySelector('span').textContent = 'Listening';
-        wave.classList.add('active');
-    } else {
-        btn.innerHTML = '<span>🎙️</span> Start Voice';
-        status.className = 'status-badge';
-        status.querySelector('span').textContent = 'Idle';
-        wave.classList.remove('active');
-    }
-}
-
-// Utilities
+// ===== UTILITY =====
 function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
 
-function handleVolumeChange(value) {
-    console.log(`🔊 Volume adjustment requested: ${value}`);
-    
-    if (value === 'up') {
-        assistantVolume = Math.min(1.0, assistantVolume + 0.2);
-        addAIMessage(`🔊 Volume increased to ${Math.round(assistantVolume * 100)}%`);
-    } else if (value === 'down') {
-        assistantVolume = Math.max(0.0, assistantVolume - 0.2);
-        addAIMessage(`🔉 Volume decreased to ${Math.round(assistantVolume * 100)}%`);
-    } else if (value === 'mute') {
-        assistantVolume = 0.0;
-        addAIMessage("🔇 Assistant is now muted.");
-    } else if (value === 'unmute') {
-        assistantVolume = 1.0;
-        addAIMessage("🔊 Assistant unmuted.");
-    }
-    
-    // Update UI if needed
-    const status = document.getElementById('voice-status');
-    if (status && assistantVolume === 0) {
-        status.querySelector('span').textContent = "Muted";
-    } else if (status && assistantVolume > 0) {
-        status.querySelector('span').textContent = isListening ? "Listening" : "Idle";
-    }
+// ===== VOICE INPUT =====
+let continuousMode = false;
+let micResumeInterval = null;
+function startContinuousCheck() { if (micResumeInterval) clearInterval(micResumeInterval); micResumeInterval = setInterval(() => { if (continuousMode && !isListening) { const synth = window.speechSynthesis; if (!synth.speaking && !synth.pending) { console.log("🔄 AI is silent. Resuming mic..."); startVoice(); }}}, 1000); }
+function toggleVoice() { console.log("🎙️ Toggle Voice clicked. isListening:", isListening); if (isListening) { stopVoice(); } else { startVoice(); }}
+function startVoice() {
+    console.log("🎙️ Attempting to start Voice...");
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) { alert("❌ Voice NOT supported in this browser.\n\nPlease use Google Chrome or Microsoft Edge."); return; }
+    if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') { alert("⚠️ Voice Blocked!\n\nPlease open this page at http://localhost:8000/ or https://"); return; }
+    if (recognition) { try { recognition.abort(); } catch(e) {} recognition = null; }
+    const myRec = new SpeechRecognition(); recognition = myRec; myRec.continuous = true; myRec.interimResults = false; myRec.lang = 'en-US'; myRec.maxAlternatives = 1;
+    continuousMode = true; if (micResumeInterval) clearInterval(micResumeInterval);
+    myRec.onstart = () => { isListening = true; updateVoiceUI(true); console.log("✅✅✅ Microphone ACTIVE."); stopAllSpeech(); };
+    myRec.onresult = (event) => { const lastIdx = event.results.length - 1; const text = event.results[lastIdx][0].transcript; const confidence = event.results[lastIdx][0].confidence; console.log(`🗣️ Heard: "${text}" (${Math.round(confidence*100)}%)`); if (window.speechSynthesis.speaking || window.speechSynthesis.pending) { console.log("⏸️ Ignoring: AI is speaking."); return; } const timeSinceAiSpoke = Date.now() - lastAiSpeechTime; if (timeSinceAiSpoke < 1200) { console.log(`⏸️ Ignoring echo: AI spoke ${timeSinceAiSpoke}ms ago.`); return; } if (wakeWordMode) { const lowerText = text.toLowerCase().trim(); let wakeWordFound = null; let command = ""; for (const word of WAKE_WORDS) { if (lowerText.includes(word)) { wakeWordFound = word; const parts = lowerText.split(word); if (parts.length > 1) command = parts[parts.length - 1].trim(); break; }} if (wakeWordFound) { console.log(`✅ Wake Word Detected: "${wakeWordFound}"`); if (command.length > 2) { document.getElementById('input').value = command; sendMessage(); } else { updateVoiceUI(false); setTimeout(() => { if(isListening) updateVoiceUI(true); }, 500); }} else { console.log(`⏳ Waiting for wake word...`); } return; } if (text && text.trim().length > 0) { console.log("📝 Processing result..."); updateVoiceUI(false); setTimeout(() => { if(isListening) updateVoiceUI(true); }, 300); document.getElementById('input').value = text; sendMessage(); }};
+    myRec.onerror = (event) => { console.error("❌❌❌ Mic Error:", event.error); if (event.error === 'not-allowed') { alert("🚫 Microphone Blocked!"); stopVoice(); } else if (event.error === 'network') { console.log("🌐 Network Error."); setTimeout(() => { if(continuousMode && recognition === myRec) restartMic(myRec); }, 3000); } else if (event.error === 'no-speech') { console.log("⏳ No speech detected."); } };
+    myRec.onend = () => { console.log("🛑 Mic session ended."); if (recognition !== myRec) return; isListening = false; updateVoiceUI(false); if (continuousMode) { console.log("🔄 Waiting for silence..."); const check = setInterval(() => { if (!continuousMode || recognition !== myRec) { clearInterval(check); return; } if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) { clearInterval(check); console.log("✅ AI silent. Restarting..."); restartMic(myRec); }}, 500); }};
+    try { isListening = true; myRec.start(); console.log("🎙️ Started."); } catch(e) { console.error("❌ Start failed:", e); isListening = false; updateVoiceUI(false); }
 }
-function startTimer(seconds, label) {
-    const id = ++timerSeq;
-    const timeoutId = setTimeout(() => { 
-        activeTimers.delete(id); 
-        addAIMessage(`⏰ ${label} finished!`); 
-    }, seconds * 1000);
-    activeTimers.set(id, timeoutId);
-    // Note: The "Timer set..." message is handled by the AI response text.
-}
+function restartMic(myRec) { if (!continuousMode) return; if (recognition !== myRec) return; try { myRec.start(); isListening = true; updateVoiceUI(true); console.log("🎙️ Restarted."); } catch(e) { console.warn("⚠️ Restart failed. Creating new...", e); startVoice(); }}
+function stopVoice() { console.log("🛑 stopVoice."); isListening = false; continuousMode = false; if (micResumeInterval) { clearInterval(micResumeInterval); micResumeInterval = null; } updateVoiceUI(false); if (recognition) { try { recognition.stop(); } catch(e) {} recognition = null; }}
+function updateVoiceUI(listening) { const btn = document.getElementById('voice-btn'); const status = document.getElementById('voice-status'); const wave = document.getElementById('sound-wave'); if (listening) { btn.innerHTML = '<span>⏹</span> Stop'; status.className = 'status-badge listening'; status.querySelector('span').textContent = 'Listening'; wave.classList.add('active'); } else { btn.innerHTML = '<span>🎙️</span> Voice'; status.className = 'status-badge'; status.querySelector('span').textContent = 'Idle'; wave.classList.remove('active'); }}
 
-// --- PWA & Mobile App Features ---
-let deferredPrompt;
-const installBtn = document.createElement('button');
-installBtn.id = 'install-app-btn';
-installBtn.textContent = '📲 Install App';
-installBtn.style.cssText = 'position:fixed;bottom:80px;right:20px;padding:10px 16px;border-radius:999px;background:var(--accent);color:#fff;border:none;cursor:pointer;z-index:1000;display:none;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+// ===== WAKE WORD =====
+function toggleWakeWordMode() { wakeWordMode = !wakeWordMode; const btn = document.getElementById('wake-word-toggle'); if (btn) { btn.style.opacity = wakeWordMode ? '1' : '0.5'; btn.style.background = wakeWordMode ? 'var(--accent-soft)' : ''; } console.log(wakeWordMode ? "✅ Wake Word ON" : "❌ Wake Word OFF"); }
 
-document.body.appendChild(installBtn);
-
-// Listen for install prompt
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    installBtn.style.display = 'block';
-});
-
-// Handle install button click
-installBtn.addEventListener('click', async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-        console.log('✅ User installed the app');
-    }
-    deferredPrompt = null;
-    installBtn.style.display = 'none';
-});
-
-// Register Service Worker
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js').then((reg) => {
-            console.log('✅ Service Worker registered:', reg.scope);
-        }).catch((err) => {
-            console.warn('⚠️ SW registration failed:', err);
-        });
-    });
-}
-
-// Mobile Touch Feedback & Haptics
-document.querySelectorAll('button, .nav-pill, .platform-card, .btn').forEach(btn => {
-    btn.addEventListener('touchstart', () => {
-        if (navigator.vibrate) navigator.vibrate(10);
-    });
-});
-
-// Prevent zoom on double tap (mobile)
-let lastTouchEnd = 0;
-document.addEventListener('touchend', (e) => {
-    const now = Date.now();
-    if (now - lastTouchEnd <= 300) e.preventDefault();
-    lastTouchEnd = now;
-}, false);
-
-// --- AUTONOMOUS AGENT MODE ---
-let autonomousMode = false;
-let capturedImage = null; // Stores the Base64 image data
-
-// Camera Handling
-document.getElementById('camera-input').addEventListener('change', function(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            capturedImage = e.target.result; // Data URL
-            document.getElementById('preview-img').src = capturedImage;
-            document.getElementById('image-preview').style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-    }
-});
-
-function clearImage() {
-    capturedImage = null;
-    document.getElementById('camera-input').value = "";
-    document.getElementById('image-preview').style.display = 'none';
-}
-
-// Agent UI
-const agentPanel = document.createElement('div');
-agentPanel.id = 'agent-panel';
-agentPanel.style.cssText = 'display:none; position:fixed; bottom:90px; left:20px; right:20px; max-width:400px; max-height:300px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:12px; padding:16px; z-index:1000; box-shadow:var(--shadow); overflow-y:auto;';
-agentPanel.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <strong style="display:flex; align-items:center; gap:8px;">🤖 Autonomous Agent <span id="agent-status" style="font-size:11px; opacity:0.7;">Idle</span></strong>
-        <button onclick="document.getElementById('agent-panel').style.display='none'" style="background:none; border:none; color:var(--text-primary); cursor:pointer; font-size:18px;">✖</button>
-    </div>
-    <div id="agent-log" style="max-height:150px; overflow-y:auto; font-size:12px; color:var(--text-secondary); margin-bottom:12px; padding:8px; background:var(--bg-primary); border-radius:8px;">
-        <div>Agent ready. Give me a goal to execute.</div>
-    </div>
-    <div style="display:flex; gap:8px;">
-        <button onclick="toggleAgent()" style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:transparent; color:var(--text-primary); cursor:pointer;">Disable</button>
-        <button onclick="document.getElementById('agent-log').innerHTML=''" style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:transparent; color:var(--text-primary); cursor:pointer;">Clear Log</button>
-    </div>
-`;
+// ===== AGENT MODE =====
+const agentPanel = document.createElement('div'); agentPanel.id = 'agent-panel'; agentPanel.style.cssText = 'display:none; position:fixed; bottom:80px; left:20px; right:20px; max-width:400px; max-height:300px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:12px; padding:16px; z-index:1000; box-shadow:var(--shadow); overflow-y:auto;';
+agentPanel.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;"><strong>🤖 Agent <span id="agent-status" style="font-size:11px; opacity:0.7;">Idle</span></strong><button onclick="document.getElementById('agent-panel').style.display='none'" style="background:none; border:none; color:var(--text-primary); cursor:pointer; font-size:18px;">✖</button></div><div id="agent-log" style="max-height:150px; overflow-y:auto; font-size:12px; color:var(--text-secondary); margin-bottom:12px; padding:8px; background:var(--bg-primary); border-radius:8px;"><div>Agent ready.</div></div>`;
 document.body.appendChild(agentPanel);
+function toggleAgent() { autonomousMode = !autonomousMode; const panel = document.getElementById('agent-panel'); const toggle = document.getElementById('agent-toggle-btn'); panel.style.display = autonomousMode ? 'block' : 'none'; if(toggle) { toggle.textContent = autonomousMode ? '🤖 ON' : '🤖 OFF'; toggle.style.background = autonomousMode ? 'var(--accent-soft)' : ''; } addAIMessage(autonomousMode ? "🤖 Agent ON. Give me a goal." : "🤖 Agent OFF."); const log = document.getElementById('agent-log'); if(log) log.innerHTML += `<div>➡️ ${autonomousMode ? 'Active' : 'Disabled'}</div>`; }
 
-function toggleAgent() {
-    autonomousMode = !autonomousMode;
-    const panel = document.getElementById('agent-panel');
-    const toggle = document.getElementById('agent-toggle-btn');
-    panel.style.display = autonomousMode ? 'block' : 'none';
-    if(toggle) {
-        toggle.textContent = autonomousMode ? '🤖 Agent: ON' : '🤖 Agent: OFF';
-        toggle.style.background = autonomousMode ? 'var(--accent-soft)' : '';
-    }
-    
-    addAIMessage(autonomousMode ? "🤖 **Autonomous Mode Enabled.** Give me a goal and I'll plan & execute it step-by-step." : "🤖 Agent mode disabled.");
-    const log = document.getElementById('agent-log');
-    if(log) log.innerHTML += `<div>➡️ Mode: ${autonomousMode ? 'Active' : 'Disabled'}</div>`;
-}
+// ===== PWA =====
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
 
-// Intercept sendMessage to add autonomous flag
-const originalSendMessage = sendMessage;
-sendMessage = async function() {
-    const input = document.getElementById('input');
-    const text = input.value.trim();
-    if (!text) return;
-    
-    // Temporarily override fetch payload
-    const originalFetch = window.fetch;
-    window.fetch = async (url, opts) => {
-        if (url.includes('chat-stream-api')) {
-            try {
-                let body = JSON.parse(opts.body);
-                body.autonomous = autonomousMode;
-                if (capturedImage) {
-                    body.image = capturedImage;
-                }
-                opts.body = JSON.stringify(body);
-            } catch(e) {}
-        }
-        return originalFetch(url, opts);
-    };
-    
-    await originalSendMessage();
-    window.fetch = originalFetch;
-    
-    // Clear image after sending
-    clearImage();
-};
-
-// Extend stream parser to handle agent logs
-const originalReaderLoop = `
-    if (data.agent_log) {
-        const log = document.getElementById('agent-log');
-        if(log) {
-            log.innerHTML += '<div>' + data.agent_log + '</div>';
-            log.scrollTop = log.scrollHeight;
-            document.getElementById('agent-status').textContent = 'Working...';
-            setTimeout(() => { document.getElementById('agent-status').textContent = 'Idle'; }, 2000);
-        }
-    }
-`;
-// Note: We inject this logic directly in the stream loop below since we can't easily patch the running function string.
+// ===== MOBILE =====
+document.querySelectorAll('button, .nav-pill, .conv-item, .send-btn').forEach(btn => { btn.addEventListener('touchstart', () => { if (navigator.vibrate) navigator.vibrate(10); });});
+let lastTouchEnd = 0; document.addEventListener('touchend', (e) => { const now = Date.now(); if (now - lastTouchEnd <= 300) e.preventDefault(); lastTouchEnd = now; }, false);
 </script>
 </body>
 </html>
