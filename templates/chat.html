@@ -571,7 +571,19 @@ function addAIMessage(text){
 
 // ===== CONVERSATIONS =====
 function loadConversations(){
-    fetch('/conversations-api/').then(r=>r.json()).then(d=>{allConversations=d.conversations||[];renderConversationList();}).catch(()=>{});
+    fetch('/conversations-api/')
+        .then(r => {
+            if (!r.ok) throw new Error('API request failed');
+            return r.json();
+        })
+        .then(d => {
+            allConversations = d.conversations || [];
+            renderConversationList();
+        })
+        .catch(e => {
+            console.error("❌ Failed to load conversations:", e);
+            showToast("⚠️ Failed to load chat history", "error");
+        });
 }
 function renderConversationList(){
     const l=document.getElementById('conversation-list'), q=(document.getElementById('search-input')?.value||'').toLowerCase();
