@@ -699,94 +699,138 @@ function stopAllSpeech(){stopWatchdog();window.speechSynthesis.cancel();speechBu
 async function sendMessage(){
     stopAllSpeech();
     
-    // Clean up any previous streaming bubble to ensure sequence
-    const oldBubble=document.getElementById('streaming-bubble');
-    if(oldBubble) oldBubble.remove();
+    // 1. Abort any ongoing AI stream from a previous request to prevent interference
+    if (window.currentStreamController) {
+        window.currentStreamController.abort();
+    }
+    window.currentStreamController = new AbortController();
+
+    // 2. Finalize any existing streaming bubble so it becomes part of history
+    // and doesn't get overwritten by the new response.
+    const oldBubble = document.getElementById('streaming-bubble');
+    if(oldBubble) {
+        oldBubble.removeAttribute('id'); // Remove ID so a new one is created for the new response
+        // If the bubble was empty (just a placeholder), remove it to clean up UI
+        const content = oldBubble.querySelector('.msg-bubble');
+        if(content && content.innerHTML.trim() === '') {
+            oldBubble.remove();
+        }
+    }
+
+    const inp=document.getElementById('input'), t=inp.value.trim(); 
+    if(!t)return;
     
-    const inp=document.getElementById('input'), t=inp.value.trim(); if(!t)return;
-    inp.value='';addUserMessage(t);showTyping();
+    inp.value='';
+    addUserMessage(t);
+    showTyping();
     
     // Disable input while generating
-    inp.disabled=true; inp.placeholder="Thinking...";
+    inp.disabled=true; 
+    inp.placeholder="Thinking...";
     
-    // Open YouTube immediately if it's a song request
-    const sm=t.match(/^(?:play|search|find|open)\s+(?:song|music|video|on youtube)?\s+(.+)$/i);
-    if(sm&&sm[1].trim().length>1)window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(sm[1].trim())}`,'_blank');
-    
+    // 3. Start Stream
     try{
-        const res=await fetch('/chat-stream-api/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:t,conv_id:currentConv,autonomous:autonomousMode,image:capturedImage})});
-        const reader=res.body.getReader(), dec=new TextDecoder(); let buf='',ft='';
-        speechBuffer="";streamFinished=false;isSpeaking=true;startWatchdog();
+        const res=await fetch('/chat-stream-api/', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({message:t, conv_id:currentConv, autonomous:autonomousMode, image:capturedImage}),
+            signal: window.currentStreamController.signal // Attach abort signal
+        });
+        
+        const reader=res.body.getReader(), dec=new TextDecoder(); 
+        let buf='', ft='';
+        speechBuffer=""; streamFinished=false; isSpeaking=true; startWatchdog();
+        
         while(true){
-            const{done,value}=await reader.read(); 
+            const{done, value}=await reader.read(); 
             if(done)break;
-            const chunk=dec.decode(value,{stream:true}); buf+=chunk; const lines=buf.split('\n');buf=lines.pop();
+            const chunk=dec.decode(value,{stream:true}); buf+=chunk; 
+            const lines=buf.split('\n'); buf=lines.pop();
+            
             for(const line of lines){
                 if(!line.startsWith('data: '))continue;
                 try{
                     const d=JSON.parse(line.slice(6));
                     if(d.token){
-                        // Ensure token is a valid string and not null/undefined
+                        // Ensure token is a valid string
                         if(d.token !== null && d.token !== undefined){
                             const token = String(d.token);
                             if(token){
-                                if(ft.length===0)hideTyping(); 
+                                if(ft.length===0) hideTyping(); // Removes typing indicator, creates bubble if needed
                                 ft+=token;
                                 const b=document.getElementById('streaming-bubble');
-                                if(b)b.querySelector('.msg-bubble').innerHTML=ft.replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
-                                document.getElementById('chat').scrollTop=document.getElementById('chat').scrollHeight;
+                                if(b) b.querySelector('.msg-bubble').innerHTML = ft.replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+                                document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
                                 
                                 // Add to speech buffer
                                 speechBuffer+=token;
                                 
-                                // Continuous Speech Trigger
-                                // If we detect a sentence end, try to speak it immediately
+                                // Trigger speech if sentence ends
                                 if(speechBuffer.match(/[.!?]/)) {
                                     speakNextSentence();
                                 }
                             }
                         }
-                    }else if(d.response){
-                        if(ft.length===0){speechBuffer+=d.response;hideTyping();
-                        if(!document.getElementById('streaming-bubble')){
-                            const b=document.createElement('div');b.className='message ai';b.id='streaming-bubble';
-                            b.innerHTML=`<div class="msg-avatar">✦</div><div><div class="msg-bubble"></div></div>`;
-                            document.getElementById('chat').appendChild(b);
+                    } else if(d.response){
+                         if(ft.length===0){
+                            speechBuffer+=d.response;
+                            hideTyping();
+                            if(!document.getElementById('streaming-bubble')){
+                                const b=document.createElement('div');b.className='message ai';b.id='streaming-bubble';
+                                b.innerHTML=`<div class="msg-avatar">✦</div><div><div class="msg-bubble"></div></div>`;
+                                document.getElementById('chat').appendChild(b);
+                            }
+                            document.querySelector('#streaming-bubble .msg-bubble').innerHTML=d.response.replace(/\n/g,'<br>');
+                            ft=d.response;
                         }
-                        document.querySelector('#streaming-bubble .msg-bubble').innerHTML=d.response.replace(/\n/g,'<br>');ft=d.response;}
                     }
+                    
                     if(d.action){
-                        if(d.action.type==='open_url')window.open(d.action.url,'_blank');
-                        else if(d.action.type==='set_timer')startTimer(d.action.seconds,d.action.label);
-                        else if(d.action.type==='adjust_volume')handleVolumeChange(d.action.value);
+                        if(d.action.type==='open_url') window.open(d.action.url,'_blank');
+                        else if(d.action.type==='set_timer') startTimer(d.action.seconds,d.action.label);
+                        else if(d.action.type==='adjust_volume') handleVolumeChange(d.action.value);
                     }
+                    
                     if(d.agent_log){
                         const log=document.getElementById('agent-log');
-                        if(log){log.innerHTML+='<div>'+d.agent_log+'</div>';log.scrollTop=log.scrollHeight;
-                        const st=document.getElementById('agent-status');if(st)st.textContent='Working...';
-                        setTimeout(()=>{const s=document.getElementById('agent-status');if(s)s.textContent='Idle';},2000);}
+                        if(log){
+                            log.innerHTML+='<div>'+d.agent_log+'</div>';
+                            log.scrollTop=log.scrollHeight;
+                            const st=document.getElementById('agent-status');
+                            if(st) st.textContent='Working...';
+                            setTimeout(()=>{ const s=document.getElementById('agent-status'); if(s) s.textContent='Idle'; }, 2000);
+                        }
                     }
+                    
                     if(d.done){
                         streamFinished=true;
-                        // speakNextSentence() moved to finally block
-                        if(d.conv_id){currentConv=d.conv_id;localStorage.setItem('lastConvId',currentConv);loadConversations();}
-                        if(d.detected_mood&&d.detected_mood!=='neutral'){
+                        // Speak remaining
+                        speakNextSentence();
+                        if(d.conv_id){ currentConv=d.conv_id; localStorage.setItem('lastConvId',currentConv); loadConversations(); }
+                        if(d.detected_mood && d.detected_mood!=='neutral'){
                             const me={'stressed':'😰','worried':'😟','sad':'😢','lonely':'😔','angry':'😠','happy':'😊','grateful':'🙏','tired':'😴','confused':'😕','hopeful':'🌟','scared':'😨','crisis':'🆘'};
                             const b=document.getElementById('streaming-bubble');
-                            if(b)b.querySelector('.msg-bubble').innerHTML+=`<br><small style="opacity:0.6;">${me[d.detected_mood]||''} ${d.detected_mood}</small>`;
+                            if(b) b.querySelector('.msg-bubble').innerHTML += `<br><small style="opacity:0.6;">${me[d.detected_mood]||''} ${d.detected_mood}</small>`;
                         }
                     }
                 }catch(e){}
             }
         }
     }catch(err){
-        hideTyping();addAIMessage('Error connecting');showToast('⚠️ Connection failed','error');
+        if(err.name === 'AbortError') {
+            console.log("Stream aborted");
+        } else {
+            hideTyping();
+            addAIMessage('Error connecting');
+            showToast('⚠️ Connection failed','error');
+        }
     }finally{
-        // Ensure we finish speaking and re-enable input
+        // Cleanup
         streamFinished=true;
         speakNextSentence();
         stopWatchdog();
-        inp.disabled=false; inp.placeholder="Type your message...";
+        inp.disabled=false; 
+        inp.placeholder="Type your message...";
         clearImage();
     }
 }
@@ -839,141 +883,176 @@ function startTimer(sec,label){
 function esc(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
 
 // ===== VOICE INPUT =====
-function toggleVoice(){isListening?stopVoice():startVoice();}
+function toggleVoice(){
+    console.log("🔘 Voice button clicked. Current state:", isListening ? "Listening" : "Idle");
+    if(isListening){
+        stopVoice();
+    }else{
+        startVoice();
+    }
+}
+
 function startVoice(){
     console.log("🎙️ Attempting to start voice...");
-    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    
+    // 1. Check Support
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SR){
-        console.error("❌ SpeechRecognition API not available");
         showToast('❌ Voice not supported. Use Chrome/Edge','error');
         return;
     }
     
-    // Check secure context
+    // 2. Secure Context Check
     if(!window.isSecureContext && location.hostname!=='localhost' && location.hostname!=='127.0.0.1'){
-        console.error("❌ Insecure context");
         showToast('⚠️ Must use http://localhost or http://127.0.0.1','error');
         return;
     }
     
-    // Stop any existing recognition cleanly
+    // 3. Stop existing instance cleanly
     if(recognition){
-        try{recognition.abort();}catch(e){}
-        recognition=null;
+        try{ recognition.abort(); } catch(e){}
+        recognition = null;
     }
     
-    const myRec=new SR();
-    recognition=myRec;
-    myRec.continuous=true;
-    myRec.interimResults=false;
-    myRec.lang='en-US';
-    myRec.maxAlternatives=1;
+    // 4. Create New Instance
+    const myRec = new SR();
+    recognition = myRec;
     
-    continuousMode=true;
-    if(micResumeInterval)clearInterval(micResumeInterval);
+    // Settings
+    myRec.continuous = true;
+    myRec.interimResults = false;
+    myRec.lang = 'en-US';
+    myRec.maxAlternatives = 1;
     
-    myRec.onstart=()=>{
+    // State flags
+    continuousMode = true;
+    if(micResumeInterval) clearInterval(micResumeInterval);
+    
+    // Immediate UI feedback
+    const btn = document.getElementById('voice-btn');
+    if(btn) btn.innerHTML = '⏳ Starting...';
+    
+    // Event Handlers
+    myRec.onstart = () => {
         console.log("✅ Microphone ACTIVE");
-        isListening=true;
+        isListening = true;
         updateVoiceUI(true);
-        // Only stop AI speech, don't cancel recognition
-        window.speechSynthesis.cancel();
-        showToast('🎙️ Listening...','success');
+        window.speechSynthesis.cancel(); // Stop AI voice if it's talking
     };
     
-    myRec.onresult=ev=>{
-        const li=ev.results.length-1;
-        const txt=ev.results[li][0].transcript;
-        const conf=ev.results[li][0].confidence;
+    myRec.onresult = ev => {
+        const li = ev.results.length-1;
+        const txt = ev.results[li][0].transcript;
+        const conf = ev.results[li][0].confidence;
         console.log(`🗣️ Heard: "${txt}" (${Math.round(conf*100)}%)`);
         
         // Echo protection
-        if(window.speechSynthesis.speaking||window.speechSynthesis.pending){
+        if(window.speechSynthesis.speaking || window.speechSynthesis.pending){
             console.log("⏸️ Ignoring: AI is speaking");
             return;
         }
-        if(Date.now()-lastAiSpeechTime<1200){
+        if(Date.now() - lastAiSpeechTime < 1200){
             console.log("⏸️ Ignoring: Echo");
             return;
         }
         
         // Wake word mode
         if(wakeWordMode){
-            const lt=txt.toLowerCase().trim();
-            let wf=null,cmd="";
-            for(const w of WAKE_WORDS)if(lt.includes(w)){wf=w;const p=lt.split(w);if(p.length>1)cmd=p[p.length-1].trim();break;}
+            const lt = txt.toLowerCase().trim();
+            let wf=null, cmd="";
+            for(const w of WAKE_WORDS) if(lt.includes(w)){ wf=w; const p=lt.split(w); if(p.length>1) cmd=p[p.length-1].trim(); break; }
             if(wf){
-                console.log(`✅ Wake word detected: "${wf}"`);
-                if(cmd.length>2){document.getElementById('input').value=cmd;sendMessage();}
-                else{updateVoiceUI(false);setTimeout(()=>{if(isListening)updateVoiceUI(true);},500);}
+                console.log(`✅ Wake word: "${wf}"`);
+                if(cmd.length > 2){ document.getElementById('input').value = cmd; sendMessage(); }
             }
             return;
         }
         
         // Normal mode
-        if(txt&&txt.trim().length>0){
-            updateVoiceUI(false);
-            setTimeout(()=>{if(isListening)updateVoiceUI(true);},300);
-            document.getElementById('input').value=txt;
+        if(txt && txt.trim().length > 0){
+            document.getElementById('input').value = txt;
             sendMessage();
         }
     };
     
-    myRec.onerror=ev=>{
-        console.error("❌ Mic error:",ev.error);
-        if(ev.error==='not-allowed'){
-            showToast('🚫 Microphone blocked! Click the 🔒 icon in address bar and allow mic access.','error');
+    myRec.onerror = ev => {
+        console.error("❌ Mic error:", ev.error);
+        if(ev.error === 'not-allowed'){
+            showToast('🚫 Mic blocked! Allow access in browser settings.','error');
             stopVoice();
-        }else if(ev.error==='network'){
-            console.log("🌐 Network error, will retry...");
-            setTimeout(()=>{if(continuousMode&&recognition===myRec)restartMic(myRec);},3000);
-        }else if(ev.error==='no-speech'){
-            console.log("⏳ No speech detected, continuing to listen...");
-        }else if(ev.error==='aborted'){
-            console.log("⏹️ Recognition aborted");
-        }else{
-            console.log("⚠️ Other error:",ev.error);
+        } else if (ev.error === 'network') {
+            showToast('🌐 Network error. Check connection.','error');
+            stopVoice();
+        } else if (ev.error === 'no-speech') {
+            console.log("⏳ No speech detected, keeping mic open...");
         }
     };
     
-    myRec.onend=()=>{
+    myRec.onend = () => {
         console.log("🛑 Recognition ended");
-        if(recognition!==myRec)return; // Ignore if replaced
-        isListening=false;
-        updateVoiceUI(false);
+        if(recognition !== myRec) return; // Ignore if replaced
         
+        isListening = false; 
+        
+        // If continuous mode is on, we attempt to restart immediately.
+        // We do NOT update the UI to "Idle" yet to prevent flickering.
         if(continuousMode){
-            console.log("🔄 Continuous mode: waiting for AI silence to restart...");
-            const ch=setInterval(()=>{
-                if(!continuousMode||recognition!==myRec){clearInterval(ch);return;}
-                if(!window.speechSynthesis.speaking&&!window.speechSynthesis.pending){
-                    clearInterval(ch);
-                    console.log("✅ AI silent, restarting mic...");
-                    restartMic(myRec);
+            console.log("🔄 Restarting mic...");
+            setTimeout(() => {
+                if(continuousMode && recognition === myRec){
+                    try {
+                        myRec.start();
+                    } catch(e){
+                        console.error("Restart failed", e);
+                        stopVoice(); // Give up if restart fails
+                    }
                 }
-            },500);
+            }, 300);
+        } else {
+            updateVoiceUI(false);
         }
     };
     
-    try{
-        console.log("🎙️ Starting recognition...");
+    // 5. Start
+    try {
+        console.log("🎙️ Calling start()...");
         myRec.start();
-    }catch(e){
-        console.error("❌ Failed to start recognition:",e);
-        isListening=false;
-        updateVoiceUI(false);
-        showToast('❌ Failed to start microphone: '+e.message,'error');
+    } catch(e) {
+        console.error("❌ Start failed", e);
+        stopVoice();
     }
 }
-function restartMic(myRec){if(!continuousMode||recognition!==myRec)return;try{myRec.start();isListening=true;updateVoiceUI(true);}catch(e){startVoice();}}
+
 function stopVoice(){
-    isListening=false;continuousMode=false;if(micResumeInterval){clearInterval(micResumeInterval);micResumeInterval=null;}
-    updateVoiceUI(false);if(recognition){try{recognition.stop();}catch(e){}recognition=null;}
+    console.log("🛑 Stopping voice...");
+    isListening = false;
+    continuousMode = false;
+    if(micResumeInterval){ clearInterval(micResumeInterval); micResumeInterval = null; }
+    updateVoiceUI(false);
+    if(recognition){
+        try{ recognition.stop(); } catch(e){}
+        recognition = null;
+    }
 }
+
 function updateVoiceUI(listening){
-    const btn=document.getElementById('voice-btn'), st=document.getElementById('voice-status'), w=document.getElementById('sound-wave');
-    if(listening){btn.innerHTML='⏹ Stop';st.className='status-badge listening';st.querySelector('span').textContent='Listening';w.classList.add('active');}
-    else{btn.innerHTML='🎙️ Voice';st.className='status-badge';st.querySelector('span').textContent='Idle';w.classList.remove('active');}
+    const btn = document.getElementById('voice-btn');
+    const st = document.getElementById('voice-status');
+    const w = document.getElementById('sound-wave');
+    
+    if(!btn || !st || !w) return; // Safety check
+    
+    if(listening){
+        btn.innerHTML = '⏹ Stop';
+        st.className = 'status-badge listening';
+        st.querySelector('span').textContent = 'Listening';
+        w.classList.add('active');
+    } else {
+        btn.innerHTML = '🎙️ Voice';
+        st.className = 'status-badge';
+        st.querySelector('span').textContent = 'Idle';
+        w.classList.remove('active');
+    }
 }
 
 // ===== WAKE WORD =====

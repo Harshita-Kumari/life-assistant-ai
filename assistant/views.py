@@ -2958,11 +2958,12 @@ def ai_status_api(request):
 def load_chat(request):
     conv_id = request.GET.get('conv_id')
     if not conv_id:
-        return JsonResponse({"chats": []})
+        return JsonResponse({"messages": []})
 
+    # Ensure strict ordering by ID which implies time sequence
     chats = (
         Memory.objects.filter(conversation_id=conv_id)
-        .order_by("created_at")
+        .order_by("id")
         .values("message", "response")
     )
 
@@ -2973,7 +2974,7 @@ def load_chat(request):
             "response": chat["response"],
         })
 
-    return JsonResponse({"chats": data})
+    return JsonResponse({"messages": data})
 
 
 def conversations_api(request):
@@ -3137,44 +3138,58 @@ def chat_stream_api(request):
     # Handle Autonomous Mode
     autonomous = payload.get("autonomous", False)
     image_data = payload.get("image") # Base64 Data URL
-    
+
     # Inject agent mode into system prompt
     messages = [{"role": "system", "content": _system_prompt(autonomous=autonomous)}]
+
+    # IMMEDIATE SAVE: Create memory entry for user message immediately.
+    # This ensures the message appears in history even if AI fails or stream drops.
+    memory_entry = Memory.objects.create(conversation=conversation, message=user_message, response="")
+
+    # Helper to save response and update conversation title
+    def save_response_and_title(response_text):
+        memory_entry.response = response_text
+        memory_entry.save(update_fields=['response'])
+        if conversation.title == "New Chat":
+            conversation.title = (user_message[:60] or "New Chat") + ("..." if len(user_message) > 60 else "")
+            conversation.save(update_fields=['title'])
 
     # Handle specialized commands that shouldn't be streamed
     auto_mode_response = _handle_auto_mode_command(lower_msg, profile)
     if auto_mode_response:
+        resp_text = auto_mode_response.get("response") if isinstance(auto_mode_response, dict) else auto_mode_response
+        action = auto_mode_response.get("action") if isinstance(auto_mode_response, dict) else None
+        save_response_and_title(resp_text)
         def cmd_gen():
-            resp_text = auto_mode_response.get("response") if isinstance(auto_mode_response, dict) else auto_mode_response
-            action = auto_mode_response.get("action") if isinstance(auto_mode_response, dict) else None
             yield "data: " + json.dumps({"response": resp_text, "conv_id": conversation.id, "action": action, **mood_meta}) + "\n\n"
-        Memory.objects.create(conversation=conversation, message=user_message, response=resp_text)
         return StreamingHttpResponse(cmd_gen(), content_type='text/event-stream')
 
     # --- NEW: Handle auto actions (open sites, timers, etc.) ---
     inferred_action = _infer_auto_action(lower_msg)
     if inferred_action:
+        resp_text = inferred_action.get("response")
+        save_response_and_title(resp_text)
         def action_gen():
             yield "data: " + json.dumps({
-                "response": inferred_action.get("response"), 
-                "conv_id": conversation.id, 
-                "action": inferred_action.get("action"), 
+                "response": resp_text,
+                "conv_id": conversation.id,
+                "action": inferred_action.get("action"),
                 **mood_meta
             }) + "\n\n"
-        Memory.objects.create(conversation=conversation, message=user_message, response=inferred_action.get("response"))
         return StreamingHttpResponse(action_gen(), content_type='text/event-stream')
     # ----------------------------------------------------------
 
     goal_response = _handle_goal_commands(user_message)
     if goal_response:
+        save_response_and_title(goal_response)
         def goal_gen():
             yield "data: " + json.dumps({"response": goal_response, "conv_id": conversation.id, **mood_meta}) + "\n\n"
-        Memory.objects.create(conversation=conversation, message=user_message, response=goal_response)
         return StreamingHttpResponse(goal_gen(), content_type='text/event-stream')
 
     # Handle Student Commands
     student_response = _handle_student_command(user_message)
     if student_response:
+        save_response_and_title(student_response.get("response"))
         def student_gen():
             yield "data: " + json.dumps({
                 "response": student_response.get("response"), 
@@ -3182,12 +3197,12 @@ def chat_stream_api(request):
                 "action": student_response.get("action"), 
                 **mood_meta
             }) + "\n\n"
-        Memory.objects.create(conversation=conversation, message=user_message, response=student_response.get("response"))
         return StreamingHttpResponse(student_gen(), content_type='text/event-stream')
 
     # Handle Media Commands
     media_response = _handle_media_command(user_message)
     if media_response:
+        save_response_and_title(media_response.get("response"))
         def media_gen():
             yield "data: " + json.dumps({
                 "response": media_response.get("response"), 
@@ -3195,12 +3210,12 @@ def chat_stream_api(request):
                 "action": media_response.get("action"), 
                 **mood_meta
             }) + "\n\n"
-        Memory.objects.create(conversation=conversation, message=user_message, response=media_response.get("response"))
         return StreamingHttpResponse(media_gen(), content_type='text/event-stream')
 
     # Handle Web Automation Commands
     automation_response = _handle_web_automation(user_message)
     if automation_response:
+        save_response_and_title(automation_response.get("response"))
         def automation_gen():
             yield "data: " + json.dumps({
                 "response": automation_response.get("response"), 
@@ -3208,12 +3223,12 @@ def chat_stream_api(request):
                 "action": automation_response.get("action"), 
                 **mood_meta
             }) + "\n\n"
-        Memory.objects.create(conversation=conversation, message=user_message, response=automation_response.get("response"))
         return StreamingHttpResponse(automation_gen(), content_type='text/event-stream')
 
     # Handle Task Commands
     task_response = _handle_task_command(user_message)
     if task_response:
+        save_response_and_title(task_response.get("response"))
         def task_gen():
             yield "data: " + json.dumps({
                 "response": task_response.get("response"), 
@@ -3221,7 +3236,6 @@ def chat_stream_api(request):
                 "action": task_response.get("action"), 
                 **mood_meta
             }) + "\n\n"
-        Memory.objects.create(conversation=conversation, message=user_message, response=task_response.get("response"))
         return StreamingHttpResponse(task_gen(), content_type='text/event-stream')
 
     # AI Generation with Streaming
@@ -3250,16 +3264,8 @@ def chat_stream_api(request):
     for row in history_rows:
         messages.append({"role": "user", "content": row["message"]})
         messages.append({"role": "assistant", "content": row["response"]})
-    
+
     # Add current user message (with image support if present)
-    # Note: We need to access image_data which is defined higher up in the function scope.
-    # However, looking at the code flow, image_data is only available in the outer scope if defined there.
-    # Let's ensure we are passing it correctly.
-    # In the current flow of chat_stream_api, image_data is defined at ~line 3139.
-    # We need to retrieve it here. Let's assume it's passed or available.
-    # Actually, I should modify the payload construction logic here to be aware of image_data.
-    # Since this is a stream function, I'll use the variable from the outer scope.
-    
     if image_data:
         user_content = [
             {"type": "text", "text": user_message},
@@ -3295,7 +3301,7 @@ def chat_stream_api(request):
                 stream=True,
                 timeout=_max_int("OPENAI_TIMEOUT_SECONDS", 45),
             )
-            
+
             for line in response.iter_lines():
                 if line:
                     decoded_line = line.decode('utf-8')
@@ -3309,28 +3315,22 @@ def chat_stream_api(request):
                                     full_reply += content
                                     # Send token to frontend
                                     yield f"data: {json.dumps({'token': content})}\n\n"
-                                    
+
                                     # Autonomous Agent Action Parser
                                     if autonomous and "[ACTION:" in content:
-                                        # Check if we have a complete action string
                                         action_match = re.search(r"\[ACTION:(\w+)\|([^\]]+)\]", full_reply)
                                         if action_match:
                                             tool = action_match.group(1)
                                             params_str = action_match.group(2)
-                                            # Simple key=value parser
                                             params = {}
                                             for part in params_str.split(","):
                                                 if "=" in part:
                                                     k, v = part.split("=", 1)
                                                     params[k.strip()] = v.strip()
-                                            
+
                                             # Execute and yield result
                                             result = _execute_agent_action(tool, params)
                                             yield f"data: {json.dumps({'agent_log': result})}\n\n"
-                                            
-                                            # Remove the action tag from full_reply to keep chat clean
-                                            # (Optional, but keeps UI clean)
-                                            # full_reply = full_reply.replace(action_match.group(0), "")
                         except json.JSONDecodeError:
                             continue
         except Exception as e:
@@ -3342,15 +3342,21 @@ def chat_stream_api(request):
             full_reply += f"\n\n{suggestion}"
             yield f"data: {json.dumps({'token': '\n\n' + suggestion})}\n\n"
 
-        # Save to memory and update context
-        Memory.objects.create(conversation=conversation, message=user_message, response=full_reply)
-        _update_conversation_context(conversation, history_rows, user_message, full_reply)
+        # Save to memory (Update the entry created at start of request)
+        # We check if memory_entry exists to handle both streaming and early returns
+        try:
+            memory_entry.response = full_reply
+            memory_entry.save(update_fields=['response'])
+            _update_conversation_context(conversation, history_rows, user_message, full_reply)
 
-        # Set title if new
-        if conversation.title == "New Chat":
-            preview = user_message[:60]
-            conversation.title = preview or "New Chat"
-            conversation.save(update_fields=["title"])
+            # Set title if new
+            if conversation.title == "New Chat":
+                preview = user_message[:60]
+                conversation.title = preview or "New Chat"
+                conversation.save(update_fields=["title"])
+        except NameError:
+            # Fallback if memory_entry wasn't created (e.g. in very old code paths)
+            Memory.objects.create(conversation=conversation, message=user_message, response=full_reply)
 
         # Send completion metadata
         yield f"data: {json.dumps({'done': True, 'response': full_reply, 'conv_id': conversation.id, **mood_meta})}\n\n"
