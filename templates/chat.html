@@ -685,7 +685,12 @@ function stopAllSpeech(){stopWatchdog();window.speechSynthesis.cancel();speechBu
 
 // ===== SEND MESSAGE =====
 async function sendMessage(){
-    stopAllSpeech(); // Reset state for new message
+    stopAllSpeech();
+    
+    // Clean up any previous streaming bubble to ensure sequence
+    const oldBubble=document.getElementById('streaming-bubble');
+    if(oldBubble) oldBubble.remove();
+    
     const inp=document.getElementById('input'), t=inp.value.trim(); if(!t)return;
     inp.value='';addUserMessage(t);showTyping();
     
