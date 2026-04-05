@@ -1,7 +1,9 @@
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import User
 
 class Conversation(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name="conversations")
     title = models.CharField(max_length=200, default="New Chat")
     is_pinned = models.BooleanField(default=False)
     running_summary = models.TextField(default="", blank=True)
@@ -88,6 +90,7 @@ class GoalStep(models.Model):
 
 
 class HabitTracker(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name="habits")
     """A habit to track daily/recurring activities."""
     FREQUENCY_CHOICES = [
         ('daily', 'Daily'),
@@ -179,6 +182,7 @@ class HabitLog(models.Model):
 
 class Task(models.Model):
     """A task to be completed."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name="tasks")
     PRIORITY_CHOICES = [
         ('low', 'Low'),
         ('medium', 'Medium'),
@@ -198,6 +202,7 @@ class Task(models.Model):
 
 class Subject(models.Model):
     """A course or subject the student is studying."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name="subjects")
     name = models.CharField(max_length=100)
     teacher = models.CharField(max_length=100, blank=True, default="")
     color = models.CharField(max_length=20, default="#3b82f6")

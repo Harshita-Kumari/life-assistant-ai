@@ -1,7 +1,10 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from .models import (
     Memory,
     Conversation,
@@ -30,9 +33,50 @@ import datetime
 from urllib.parse import quote_plus
 import time
 
+# --- Authentication Views ---
+def login_page(request):
+    if request.user.is_authenticated:
+        return redirect('chat')
+    return render(request, 'login.html')
 
+def signup_page(request):
+    if request.user.is_authenticated:
+        return redirect('chat')
+    return render(request, 'signup.html')
+
+@csrf_exempt
+def login_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return JsonResponse({'success': True, 'redirect': '/'})
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid credentials'})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+@csrf_exempt
+def signup_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        if User.objects.filter(username=username).exists():
+            return JsonResponse({'success': False, 'error': 'Username already exists'})
+        user = User.objects.create_user(username=username, password=password)
+        login(request, user)
+        return JsonResponse({'success': True, 'redirect': '/'})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+@login_required
+def logout_view(request):
+    logout(request)
+    return redirect('/login/')
+
+@login_required
 def chat_page(request):
-    conversations = Conversation.objects.all().order_by('-created_at')
+    conversations = Conversation.objects.filter(user=request.user).order_by('-created_at')
     return render(request, 'chat.html', {"conversations": conversations})
 
 
@@ -50,7 +94,7 @@ def history_api(request):
     if conv_id:
         # Get specific conversation with full message history
         try:
-            conversation = Conversation.objects.get(id=conv_id)
+            conversation = Conversation.objects.get(id=conv_id, user=request.user)
             memories = Memory.objects.filter(conversation=conversation).order_by('created_at')
             return JsonResponse({
                 'conversation': {
@@ -72,7 +116,7 @@ def history_api(request):
             return JsonResponse({'error': 'Conversation not found'}, status=404)
     
     # Get all conversations (with optional search)
-    conversations = Conversation.objects.all()
+    conversations = Conversation.objects.filter(user=request.user)
     
     if search_query:
         # Search by title or message content
@@ -102,7 +146,7 @@ def history_api(request):
 
 def habit_tracker_page(request):
     """Display habit tracker page."""
-    habits = HabitTracker.objects.filter(is_active=True).order_by('-created_at')
+    habits = HabitTracker.objects.filter(user=request.user, is_active=True).order_by('-created_at')
     return render(request, 'habit_tracker.html', {'habits': habits})
 
 
@@ -128,6 +172,7 @@ def habit_tracker_api(request):
             target_days = payload.get('target_days', '1,2,3,4,5,6,0')
             
             habit = HabitTracker.objects.create(
+                user=request.user,
                 name=name,
                 description=description,
                 frequency=frequency,
@@ -150,7 +195,7 @@ def habit_tracker_api(request):
                 return JsonResponse({'error': 'habit_id is required'}, status=400)
             
             try:
-                habit = HabitTracker.objects.get(id=habit_id)
+                habit = HabitTracker.objects.get(id=habit_id, user=request.user)
             except HabitTracker.DoesNotExist:
                 return JsonResponse({'error': 'Habit not found'}, status=404)
             
@@ -176,7 +221,7 @@ def habit_tracker_api(request):
                 return JsonResponse({'error': 'habit_id is required'}, status=400)
             
             try:
-                habit = HabitTracker.objects.get(id=habit_id)
+                habit = HabitTracker.objects.get(id=habit_id, user=request.user)
                 habit.delete()
                 return JsonResponse({'success': True})
             except HabitTracker.DoesNotExist:
@@ -195,7 +240,7 @@ def habit_tracker_api(request):
             mood_after = payload.get('mood_after', '')
             
             try:
-                habit = HabitTracker.objects.get(id=habit_id)
+                habit = HabitTracker.objects.get(id=habit_id, user=request.user)
             except HabitTracker.DoesNotExist:
                 return JsonResponse({'error': 'Habit not found'}, status=404)
             
@@ -231,11 +276,11 @@ def habit_tracker_api(request):
     
     # GET request - retrieve habits
     habit_id = request.GET.get('habit_id')
-    
+
     if habit_id:
         # Get specific habit with logs
         try:
-            habit = HabitTracker.objects.get(id=habit_id)
+            habit = HabitTracker.objects.get(id=habit_id, user=request.user)
             logs = habit.logs.order_by('-date')[:90]  # Last 90 days
             
             return JsonResponse({
@@ -265,7 +310,7 @@ def habit_tracker_api(request):
             return JsonResponse({'error': 'Habit not found'}, status=404)
     
     # Get all habits
-    habits = HabitTracker.objects.filter(is_active=True).order_by('-created_at')
+    habits = HabitTracker.objects.filter(user=request.user, is_active=True).order_by('-created_at')
     
     result = []
     for habit in habits:
@@ -318,9 +363,9 @@ def task_manager_page(request):
 
 def student_dashboard(request):
     """Display student dashboard."""
-    subjects = Subject.objects.all().order_by('name')
-    upcoming_exams = Exam.objects.filter(exam_date__gte=timezone.now()).order_by('exam_date')[:5]
-    pending_assignments = Assignment.objects.filter(is_completed=False).order_by('due_date')[:5]
+    subjects = Subject.objects.filter(user=request.user).order_by('name')
+    upcoming_exams = Exam.objects.filter(exam_date__gte=timezone.now(), subject__user=request.user).order_by('exam_date')[:5]
+    pending_assignments = Assignment.objects.filter(is_completed=False, subject__user=request.user).order_by('due_date')[:5]
     
     return render(request, 'student_dashboard.html', {
         'subjects': subjects,
@@ -345,7 +390,7 @@ def student_api(request):
             name = payload.get('name', '').strip()
             if not name:
                 return JsonResponse({'error': 'Subject name required'}, status=400)
-            sub, created = Subject.objects.get_or_create(name__iexact=name, defaults={'name': name})
+            sub, created = Subject.objects.get_or_create(user=request.user, name__iexact=name, defaults={'name': name})
             return JsonResponse({'success': True, 'message': f"Subject '{sub.name}' added!"})
             
         # Add Assignment
@@ -357,11 +402,11 @@ def student_api(request):
             
             subject = None
             if subject_name:
-                subject = Subject.objects.filter(name__iexact=subject_name).first()
-            
+                subject = Subject.objects.filter(user=request.user, name__iexact=subject_name).first()
+
             if not subject:
                 return JsonResponse({'error': f"Subject '{subject_name}' not found. Please add it first."}, status=404)
-                
+
             due = payload.get('due_date')
             assignment = Assignment.objects.create(
                 subject=subject,
@@ -374,7 +419,7 @@ def student_api(request):
         # Complete Assignment
         elif action == 'complete_assignment':
             query = payload.get('title', '').strip()
-            assignment = Assignment.objects.filter(title__icontains=query, is_completed=False).first()
+            assignment = Assignment.objects.filter(title__icontains=query, is_completed=False, subject__user=request.user).first()
             if assignment:
                 assignment.is_completed = True
                 assignment.save()
@@ -392,8 +437,8 @@ def student_api(request):
             
             subject = None
             if subject_name:
-                subject = Subject.objects.filter(name__iexact=subject_name).first()
-                
+                subject = Subject.objects.filter(user=request.user, name__iexact=subject_name).first()
+
             exam = Exam.objects.create(
                 subject=subject,
                 title=title,
@@ -403,9 +448,9 @@ def student_api(request):
             return JsonResponse({'success': True, 'message': f"Exam '{title}' added!"})
 
     # GET request - get data
-    subjects = list(Subject.objects.values('id', 'name', 'color'))
-    assignments = list(Assignment.objects.filter(is_completed=False).order_by('due_date').values('id', 'title', 'subject__name', 'due_date'))
-    exams = list(Exam.objects.filter(exam_date__gte=timezone.now()).order_by('exam_date').values('id', 'title', 'subject__name', 'exam_date'))
+    subjects = list(Subject.objects.filter(user=request.user).values('id', 'name', 'color'))
+    assignments = list(Assignment.objects.filter(is_completed=False, subject__user=request.user).order_by('due_date').values('id', 'title', 'subject__name', 'due_date'))
+    exams = list(Exam.objects.filter(exam_date__gte=timezone.now(), subject__user=request.user).order_by('exam_date').values('id', 'title', 'subject__name', 'exam_date'))
 
     return JsonResponse({
         'subjects': subjects,
@@ -429,8 +474,9 @@ def task_manager_api(request):
             title = payload.get('title', '').strip()
             if not title:
                 return JsonResponse({'error': 'Title is required'}, status=400)
-            
+
             task = Task.objects.create(
+                user=request.user,
                 title=title,
                 description=payload.get('description', ''),
                 priority=payload.get('priority', 'medium'),
@@ -453,7 +499,7 @@ def task_manager_api(request):
         elif action == 'update':
             task_id = payload.get('task_id')
             try:
-                task = Task.objects.get(id=task_id)
+                task = Task.objects.get(id=task_id, user=request.user)
             except Task.DoesNotExist:
                 return JsonResponse({'error': 'Task not found'}, status=404)
             
@@ -475,7 +521,7 @@ def task_manager_api(request):
         elif action == 'delete':
             task_id = payload.get('task_id')
             try:
-                task = Task.objects.get(id=task_id)
+                task = Task.objects.get(id=task_id, user=request.user)
                 task.delete()
                 return JsonResponse({'success': True})
             except Task.DoesNotExist:
@@ -483,7 +529,7 @@ def task_manager_api(request):
 
     # GET request - list tasks
     filter_status = request.GET.get('status', 'all') # all, pending, completed
-    tasks = Task.objects.all()
+    tasks = Task.objects.filter(user=request.user)
     
     if filter_status == 'pending':
         tasks = tasks.filter(is_completed=False)
@@ -695,11 +741,11 @@ def _handle_goal_commands(message: str) -> str | None:
     return None
 
 
-def _handle_habit_commands(message: str) -> str | None:
+def _handle_habit_commands(message: str, user=None) -> str | None:
     """Handle habit-related voice/text commands."""
     m = (message or "").strip()
     lower = m.lower()
-    
+
     # Create new habit
     create_match = re.search(
         r"\b(create|add|new|start|track)\s+(a\s+)?habit\s+(to|of|called|named)?\s*(.+)$",
@@ -710,15 +756,15 @@ def _handle_habit_commands(message: str) -> str | None:
         habit_name = create_match.group(4).strip() if create_match.group(4) else ""
         if not habit_name:
             return "What habit would you like to create? For example: 'create a habit of morning exercise'"
-        
+
         # Check if habit already exists
-        existing = HabitTracker.objects.filter(name__iexact=habit_name, is_active=True).first()
+        existing = HabitTracker.objects.filter(user=user, name__iexact=habit_name, is_active=True).first()
         if existing:
             return f"You already have a habit called '{existing.name}'. Keep it up!"
-        
-        HabitTracker.objects.create(name=habit_name, frequency='daily')
+
+        HabitTracker.objects.create(user=user, name=habit_name, frequency='daily')
         return f"Great! I've created a new habit: '{habit_name}'. Mark it complete each day to build your streak!"
-    
+
     # Complete/Log habit
     complete_match = re.search(
         r"\b(complete|done|finished|did|log|check)\s+(my\s+)?habit\s+(called|named|of)?\s*(.+)$",
@@ -729,11 +775,11 @@ def _handle_habit_commands(message: str) -> str | None:
         habit_name = complete_match.group(4).strip() if complete_match.group(4) else ""
         if not habit_name:
             return "Which habit would you like to complete?"
-        
-        habit = HabitTracker.objects.filter(name__icontains=habit_name, is_active=True).first()
-        
+
+        habit = HabitTracker.objects.filter(user=user, name__icontains=habit_name, is_active=True).first()
+
         if not habit:
-            available = list(HabitTracker.objects.filter(is_active=True).values_list('name', flat=True)[:5])
+            available = list(HabitTracker.objects.filter(user=user, is_active=True).values_list('name', flat=True)[:5])
             if available:
                 return f"I couldn't find '{habit_name}'. Your habits: {', '.join(available)}"
             return "You don't have any habits yet. Say 'create a habit of ...' to start!"
@@ -765,7 +811,7 @@ def _handle_habit_commands(message: str) -> str | None:
         if not habit_name:
             return "Which habit would you like to check?"
         
-        habit = HabitTracker.objects.filter(name__icontains=habit_name, is_active=True).first()
+        habit = HabitTracker.objects.filter(user=user, name__icontains=habit_name, is_active=True).first()
         
         if not habit:
             return f"I couldn't find a habit called '{habit_name}'."
@@ -778,7 +824,7 @@ def _handle_habit_commands(message: str) -> str | None:
     
     # List all habits
     if re.search(r"\b(my\s+habits|list habits|show habits|all habits)\b", lower):
-        habits = HabitTracker.objects.filter(is_active=True).order_by('-created_at')
+        habits = HabitTracker.objects.filter(user=user, is_active=True).order_by('-created_at')
         
         if not habits:
             return "You don't have any habits yet. Say 'create a habit of ...' to start tracking!"
@@ -803,7 +849,7 @@ def _handle_habit_commands(message: str) -> str | None:
         if not habit_name:
             return "Which habit would you like to delete?"
         
-        habit = HabitTracker.objects.filter(name__icontains=habit_name, is_active=True).first()
+        habit = HabitTracker.objects.filter(user=user, name__icontains=habit_name, is_active=True).first()
         
         if not habit:
             return f"I couldn't find a habit called '{habit_name}'."
@@ -1551,7 +1597,7 @@ def _handle_media_command(message: str) -> dict | None:
     return None
 
 
-def _handle_student_command(message: str) -> dict | None:
+def _handle_student_command(message: str, user=None) -> dict | None:
     """Handle student-related commands: subjects, assignments, exams."""
     m = (message or "").strip()
     lower = m.lower()
@@ -1560,7 +1606,7 @@ def _handle_student_command(message: str) -> dict | None:
     subject_match = re.search(r"\b(add|create|new)\s+(subject|class|course)\s+(.+)$", lower, flags=re.IGNORECASE)
     if subject_match:
         name = subject_match.group(3).strip()
-        Subject.objects.get_or_create(name__iexact=name, defaults={'name': name})
+        Subject.objects.get_or_create(user=user, name__iexact=name, defaults={'name': name})
         return {"response": f"✅ Subject added: '{name}'.", "action": {"type": "refresh_student"}}
 
     # Add Assignment: "add assignment Algebra for Math", "add homework Math"
@@ -1582,11 +1628,9 @@ def _handle_student_command(message: str) -> dict | None:
         
         subject = None
         if subject_name:
-            subject = Subject.objects.filter(name__iexact=subject_name).first()
+            subject = Subject.objects.filter(user=user, name__iexact=subject_name).first()
             if not subject:
-                 # Create subject if it doesn't exist? Or return error?
-                 # Let's create it for convenience.
-                 subject, _ = Subject.objects.get_or_create(name__iexact=subject_name, defaults={'name': subject_name})
+                 subject, _ = Subject.objects.get_or_create(user=user, name__iexact=subject_name, defaults={'name': subject_name})
 
         if not subject:
             # If no subject provided and none found, maybe ask user? 
@@ -1604,7 +1648,7 @@ def _handle_student_command(message: str) -> dict | None:
         # Group 4 is the date/time text. We aren't parsing dates well with regex alone, so we just note it.
         date_str = exam_match.group(4).strip()
         
-        subject = Subject.objects.filter(name__iexact=subj_name).first()
+        subject = Subject.objects.filter(user=user, name__iexact=subj_name).first()
         Exam.objects.create(
             subject=subject,
             title=f"{subj_name} Exam",
@@ -1641,7 +1685,7 @@ def _handle_student_command(message: str) -> dict | None:
     return None
 
 
-def _handle_task_command(message: str) -> dict | None:
+def _handle_task_command(message: str, user=None) -> dict | None:
     """Handle task-related commands: add, list, complete, delete."""
     m = (message or "").strip()
     lower = m.lower()
@@ -1652,14 +1696,14 @@ def _handle_task_command(message: str) -> dict | None:
         title = add_match.group(2).strip()
         if not title:
             return None
-        Task.objects.create(title=title)
+        Task.objects.create(user=user, title=title)
         return {"response": f"✅ Task added: '{title}'.", "action": {"type": "refresh_tasks"}}
 
     # Complete Task
     complete_match = re.search(r"\b(complete|done|finish|check)\s+(?:task\s*)?(.+)$", lower, flags=re.IGNORECASE)
     if complete_match:
         query = complete_match.group(2).strip()
-        task = Task.objects.filter(title__icontains=query, is_completed=False).first()
+        task = Task.objects.filter(user=user, title__icontains=query, is_completed=False).first()
         if task:
             task.is_completed = True
             task.save()
@@ -1668,15 +1712,15 @@ def _handle_task_command(message: str) -> dict | None:
 
     # List Tasks
     if re.search(r"\b(list|show|my)\s+(tasks|todos)\b", lower):
-        pending = Task.objects.filter(is_completed=False).count()
-        completed = Task.objects.filter(is_completed=True).count()
+        pending = Task.objects.filter(user=user, is_completed=False).count()
+        completed = Task.objects.filter(user=user, is_completed=True).count()
         return {"response": f"📋 You have {pending} pending tasks and {completed} completed tasks.", "action": {"type": "refresh_tasks"}}
 
     # Delete Task
     delete_match = re.search(r"\b(delete|remove)\s+(?:task\s*)?(.+)$", lower, flags=re.IGNORECASE)
     if delete_match:
         query = delete_match.group(2).strip()
-        task = Task.objects.filter(title__icontains=query).first()
+        task = Task.objects.filter(user=user, title__icontains=query).first()
         if task:
             task.delete()
             return {"response": f"🗑️ Deleted task '{task.title}'.", "action": {"type": "refresh_tasks"}}
@@ -2449,11 +2493,11 @@ def chat_api(request):
 
     if conv_id:
         try:
-            conversation = Conversation.objects.get(id=conv_id)
+            conversation = Conversation.objects.get(id=conv_id, user=request.user)
         except Conversation.DoesNotExist:
-            conversation = Conversation.objects.create()
+            conversation = Conversation.objects.create(user=request.user)
     else:
-        conversation = Conversation.objects.create()
+        conversation = Conversation.objects.create(user=request.user)
 
     lower_msg = str(user_message).lower()
     profile = _get_user_profile()
@@ -2495,7 +2539,7 @@ def chat_api(request):
         return JsonResponse({"response": goal_response, "conv_id": conversation.id, **mood_meta})
 
     # Handle habit commands
-    habit_response = _handle_habit_commands(user_message)
+    habit_response = _handle_habit_commands(user_message, user=request.user)
     if habit_response:
         Memory.objects.create(conversation=conversation, message=user_message, response=habit_response)
         if conversation.title == "New Chat":
@@ -3007,7 +3051,7 @@ def conversations_api(request):
     )
 
     qs = (
-        Conversation.objects.all()
+        Conversation.objects.filter(user=request.user)
         .annotate(
             last_user_message=Subquery(last_memory.values("message")[:1]),
             last_ai_message=Subquery(last_memory.values("response")[:1]),
@@ -3148,11 +3192,11 @@ def chat_stream_api(request):
 
     if conv_id:
         try:
-            conversation = Conversation.objects.get(id=conv_id)
+            conversation = Conversation.objects.get(id=conv_id, user=request.user)
         except Conversation.DoesNotExist:
-            conversation = Conversation.objects.create()
+            conversation = Conversation.objects.create(user=request.user)
     else:
-        conversation = Conversation.objects.create()
+        conversation = Conversation.objects.create(user=request.user)
 
     profile = _get_user_profile()
     detected_mood, mood_intensity = _detect_mood(user_message)
@@ -3210,7 +3254,7 @@ def chat_stream_api(request):
         return StreamingHttpResponse(goal_gen(), content_type='text/event-stream')
 
     # Handle Student Commands
-    student_response = _handle_student_command(user_message)
+    student_response = _handle_student_command(user_message, user=request.user)
     if student_response:
         save_response_and_title(student_response.get("response"))
         def student_gen():
@@ -3249,7 +3293,7 @@ def chat_stream_api(request):
         return StreamingHttpResponse(automation_gen(), content_type='text/event-stream')
 
     # Handle Task Commands
-    task_response = _handle_task_command(user_message)
+    task_response = _handle_task_command(user_message, user=request.user)
     if task_response:
         save_response_and_title(task_response.get("response"))
         def task_gen():

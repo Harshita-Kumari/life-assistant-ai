@@ -1,31 +1,20 @@
 from django.urls import path
 from django.views.generic import TemplateView
-from django.http import JsonResponse, FileResponse
-import os
 from .views import (
-    chat_page,
-    chat_api,
-    load_chat,
-    conversations_api,
-    reminders_api,
-    delete_conversation_api,
-    toggle_pin_conversation_api,
-    rename_conversation_api,
-    history_page,
-    history_api,
-    habit_tracker_page,
-    habit_tracker_api,
-    goals_page,
-    ai_status_api,
-    chat_stream_api,
-    task_manager_page,
-    task_manager_api,
-    student_dashboard,
-    student_api,
+    chat_page, login_page, signup_page, login_view, signup_view, logout_view,
+    chat_api, load_chat, conversations_api, reminders_api, delete_conversation_api,
+    toggle_pin_conversation_api, rename_conversation_api, history_page, history_api,
+    habit_tracker_page, habit_tracker_api, goals_page, ai_status_api, chat_stream_api,
+    task_manager_page, task_manager_api, student_dashboard, student_api,
 )
 
 urlpatterns = [
-    path('', chat_page),
+    path('', chat_page, name='chat'),
+    path('login/', login_page, name='login'),
+    path('signup/', signup_page, name='signup'),
+    path('api/login/', login_view),
+    path('api/signup/', signup_view),
+    path('logout/', logout_view, name='logout'),
     path('chat-api/', chat_api),
     path('chat-stream-api/', chat_stream_api),
     path('load-chat/', load_chat),
@@ -46,16 +35,6 @@ urlpatterns = [
     path('media/', TemplateView.as_view(template_name='media_hub.html')),
     path('ai-status/', ai_status_api),
     path('voice-test/', TemplateView.as_view(template_name='voice_test.html')),
-]
-
-# PWA Endpoints
-def serve_manifest(request):
-    return FileResponse(open(os.path.join(os.path.dirname(__file__), '../templates/manifest.json'), 'rb'), content_type='application/json')
-
-def serve_sw(request):
-    return FileResponse(open(os.path.join(os.path.dirname(__file__), '../templates/service-worker.js'), 'rb'), content_type='application/javascript')
-
-urlpatterns += [
-    path('manifest.json', serve_manifest),
-    path('service-worker.js', serve_sw),
+    path('manifest.json', TemplateView.as_view(template_name='manifest.json', content_type='application/json')),
+    path('service-worker.js', TemplateView.as_view(template_name='service-worker.js', content_type='application/javascript')),
 ]
