@@ -612,48 +612,73 @@ function startWatchdog(){
 function stopWatchdog(){if(watchdogInterval){clearInterval(watchdogInterval);watchdogInterval=null;}}
 
 function speakNextSentence(){
+    // Strict lock to prevent overlapping speech
     if(isSpeakingLocked||window.speechSynthesis.speaking||window.speechSynthesis.pending)return;
+    
+    // Clean buffer of extra whitespace but keep content
+    speechBuffer = speechBuffer.trimStart();
     if(!speechBuffer){
-        if(streamFinished){stopWatchdog();console.log("✅ Speech complete.");}
+        if(streamFinished){stopWatchdog();}
         return;
     }
     
-    // Look for sentence boundary in raw buffer (e.g., "." or "!" or "?")
-    // We match just the punctuation to preserve spaces in the buffer
-    let match=speechBuffer.match(/[.!?]/);
+    // Robust sentence boundary detection:
+    // Matches punctuation [.!?] followed by space or end of string.
+    // We use capture groups to split cleanly.
+    let match=speechBuffer.match(/^([^.!?]*[.!?]+)\s*/);
     let rawSentence="";
     
     if(match){
-        // Extract sentence including punctuation
-        let splitIdx=match.index+1;
-        rawSentence=speechBuffer.substring(0,splitIdx);
-        // Remove sentence from buffer (keep remaining text/spaces)
-        speechBuffer=speechBuffer.substring(splitIdx);
+        // We found a full sentence ending in punctuation
+        rawSentence=match[1]; // Includes the punctuation
+        // Remove the sentence AND the trailing whitespace from buffer
+        speechBuffer=speechBuffer.substring(match[0].length);
     }else if(streamFinished){
         // If stream ended, speak whatever is left
         rawSentence=speechBuffer;
         speechBuffer="";
     }else{
-        return; // No sentence end yet
+        return; // No complete sentence yet
     }
     
-    // Clean the raw sentence for speech (remove markdown)
-    let cleanSentence=rawSentence.replace(/\*\*/g,'').replace(/\*/g,'').replace(/__/g,'').replace(/`/g,'').replace(/#/g,'').replace(/\[([^\]]+)\]\([^)]+\)/g,'$1').replace(/https?:\/\/\S+/g,'link').trim();
+    // Clean the raw sentence for speech (remove markdown symbols)
+    // This ensures we don't speak "**" or "#"
+    let cleanSentence=rawSentence
+        .replace(/\*\*/g,'')
+        .replace(/\*/g,'')
+        .replace(/__/g,'')
+        .replace(/`/g,'')
+        .replace(/#/g,'')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g,'$1') // Links -> text
+        .replace(/https?:\/\/\S+/g,'') // Remove URLs entirely from speech
+        .trim();
     
     if(!cleanSentence){
-        speakNextSentence(); // If sentence was just markdown, try next
+        speakNextSentence(); // If sentence was just symbols/markdown, skip to next
         return;
     }
 
     isSpeakingLocked=true; 
     lastAiSpeechTime=Date.now();
-    if(window.speechSynthesis.pending&&!window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+    
+    // Cancel pending speech if any (though lock should prevent this)
+    if(window.speechSynthesis.pending) window.speechSynthesis.cancel();
     
     const u=new SpeechSynthesisUtterance(cleanSentence);
     if(selectedVoice)u.voice=selectedVoice;
     u.volume=assistantVolume;u.rate=1.0;u.pitch=1.0;
-    u.onend=()=>{isSpeakingLocked=false;speakNextSentence();};
-    u.onerror=()=>{isSpeakingLocked=false;speakNextSentence();};
+    
+    // Chain the next sentence immediately after this one finishes
+    u.onend=()=>{
+        isSpeakingLocked=false;
+        speakNextSentence();
+    };
+    u.onerror=(e)=>{
+        console.warn("Speech error", e);
+        isSpeakingLocked=false;
+        speakNextSentence();
+    };
+    
     window.speechSynthesis.speak(u);
 }
 function stopAllSpeech(){stopWatchdog();window.speechSynthesis.cancel();speechBuffer="";streamFinished=false;isSpeaking=false;isSpeakingLocked=false;}
@@ -684,17 +709,25 @@ async function sendMessage(){
                 try{
                     const d=JSON.parse(line.slice(6));
                     if(d.token){
-                        if(ft.length===0)hideTyping(); 
-                        ft+=d.token;
-                        const b=document.getElementById('streaming-bubble');
-                        if(b)b.querySelector('.msg-bubble').innerHTML=ft.replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
-                        document.getElementById('chat').scrollTop=document.getElementById('chat').scrollHeight;
-                        speechBuffer+=d.token;
-                        
-                        // Continuous Speech Trigger
-                        // If we detect a sentence end, try to speak it immediately
-                        if(speechBuffer.match(/[.!?]\s/)) {
-                            speakNextSentence();
+                        // Ensure token is a valid string and not null/undefined
+                        if(d.token !== null && d.token !== undefined){
+                            const token = String(d.token);
+                            if(token){
+                                if(ft.length===0)hideTyping(); 
+                                ft+=token;
+                                const b=document.getElementById('streaming-bubble');
+                                if(b)b.querySelector('.msg-bubble').innerHTML=ft.replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+                                document.getElementById('chat').scrollTop=document.getElementById('chat').scrollHeight;
+                                
+                                // Add to speech buffer
+                                speechBuffer+=token;
+                                
+                                // Continuous Speech Trigger
+                                // If we detect a sentence end, try to speak it immediately
+                                if(speechBuffer.match(/[.!?]/)) {
+                                    speakNextSentence();
+                                }
+                            }
                         }
                     }else if(d.response){
                         if(ft.length===0){speechBuffer+=d.response;hideTyping();
@@ -748,9 +781,15 @@ function showTyping(){
 }
 function hideTyping(){
     const e=document.getElementById('typing-indicator-msg');
-    if(e){e.remove();const b=document.createElement('div');b.className='message ai';b.id='streaming-bubble';
-    b.innerHTML=`<div class="msg-avatar">✦</div><div><div class="msg-bubble"></div></div>`;
-    document.getElementById('chat').appendChild(b);}
+    if(e){
+        e.remove();
+        // Create bubble only if it doesn't exist
+        if(!document.getElementById('streaming-bubble')){
+            const b=document.createElement('div');b.className='message ai';b.id='streaming-bubble';
+            b.innerHTML=`<div class="msg-avatar">✦</div><div><div class="msg-bubble"></div></div>`;
+            document.getElementById('chat').appendChild(b);
+        }
+    }
 }
 
 // ===== CAMERA =====
