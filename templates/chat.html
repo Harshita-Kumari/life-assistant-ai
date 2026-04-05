@@ -613,18 +613,43 @@ function stopWatchdog(){if(watchdogInterval){clearInterval(watchdogInterval);wat
 
 function speakNextSentence(){
     if(isSpeakingLocked||window.speechSynthesis.speaking||window.speechSynthesis.pending)return;
-    let cb=speechBuffer.replace(/\*\*/g,'').replace(/\*/g,'').replace(/__/g,'').replace(/`/g,'').replace(/#/g,'').replace(/\[([^\]]+)\]\([^)]+\)/g,'$1').replace(/https?:\/\/\S+/g,'link').trim();
-    speechBuffer=cb;
-    if(!speechBuffer){if(streamFinished){stopWatchdog();console.log("✅ Speech complete.");}return;}
-    const sm=speechBuffer.match(/^(.*?[.!?]+)\s*/);
-    let s="";
-    if(sm){s=sm[1].trim();speechBuffer=speechBuffer.substring(sm[0].length);}
-    else if(streamFinished){s=speechBuffer;speechBuffer="";}
-    else return;
-    if(!s.trim()){speakNextSentence();return;}
-    isSpeakingLocked=true; lastAiSpeechTime=Date.now();
+    if(!speechBuffer){
+        if(streamFinished){stopWatchdog();console.log("✅ Speech complete.");}
+        return;
+    }
+    
+    // Look for sentence boundary in raw buffer (e.g., "." or "!" or "?")
+    // We match just the punctuation to preserve spaces in the buffer
+    let match=speechBuffer.match(/[.!?]/);
+    let rawSentence="";
+    
+    if(match){
+        // Extract sentence including punctuation
+        let splitIdx=match.index+1;
+        rawSentence=speechBuffer.substring(0,splitIdx);
+        // Remove sentence from buffer (keep remaining text/spaces)
+        speechBuffer=speechBuffer.substring(splitIdx);
+    }else if(streamFinished){
+        // If stream ended, speak whatever is left
+        rawSentence=speechBuffer;
+        speechBuffer="";
+    }else{
+        return; // No sentence end yet
+    }
+    
+    // Clean the raw sentence for speech (remove markdown)
+    let cleanSentence=rawSentence.replace(/\*\*/g,'').replace(/\*/g,'').replace(/__/g,'').replace(/`/g,'').replace(/#/g,'').replace(/\[([^\]]+)\]\([^)]+\)/g,'$1').replace(/https?:\/\/\S+/g,'link').trim();
+    
+    if(!cleanSentence){
+        speakNextSentence(); // If sentence was just markdown, try next
+        return;
+    }
+
+    isSpeakingLocked=true; 
+    lastAiSpeechTime=Date.now();
     if(window.speechSynthesis.pending&&!window.speechSynthesis.speaking) window.speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(s);
+    
+    const u=new SpeechSynthesisUtterance(cleanSentence);
     if(selectedVoice)u.voice=selectedVoice;
     u.volume=assistantVolume;u.rate=1.0;u.pitch=1.0;
     u.onend=()=>{isSpeakingLocked=false;speakNextSentence();};
@@ -635,27 +660,42 @@ function stopAllSpeech(){stopWatchdog();window.speechSynthesis.cancel();speechBu
 
 // ===== SEND MESSAGE =====
 async function sendMessage(){
+    stopAllSpeech(); // Reset state for new message
     const inp=document.getElementById('input'), t=inp.value.trim(); if(!t)return;
     inp.value='';addUserMessage(t);showTyping();
+    
+    // Disable input while generating
+    inp.disabled=true; inp.placeholder="Thinking...";
+    
+    // Open YouTube immediately if it's a song request
     const sm=t.match(/^(?:play|search|find|open)\s+(?:song|music|video|on youtube)?\s+(.+)$/i);
     if(sm&&sm[1].trim().length>1)window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(sm[1].trim())}`,'_blank');
+    
     try{
         const res=await fetch('/chat-stream-api/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:t,conv_id:currentConv,autonomous:autonomousMode,image:capturedImage})});
         const reader=res.body.getReader(), dec=new TextDecoder(); let buf='',ft='';
         speechBuffer="";streamFinished=false;isSpeaking=true;startWatchdog();
         while(true){
-            const{done,value}=await reader.read(); if(done)break;
+            const{done,value}=await reader.read(); 
+            if(done)break;
             const chunk=dec.decode(value,{stream:true}); buf+=chunk; const lines=buf.split('\n');buf=lines.pop();
             for(const line of lines){
                 if(!line.startsWith('data: '))continue;
                 try{
                     const d=JSON.parse(line.slice(6));
                     if(d.token){
-                        if(ft.length===0)hideTyping(); ft+=d.token;
+                        if(ft.length===0)hideTyping(); 
+                        ft+=d.token;
                         const b=document.getElementById('streaming-bubble');
                         if(b)b.querySelector('.msg-bubble').innerHTML=ft.replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
                         document.getElementById('chat').scrollTop=document.getElementById('chat').scrollHeight;
                         speechBuffer+=d.token;
+                        
+                        // Continuous Speech Trigger
+                        // If we detect a sentence end, try to speak it immediately
+                        if(speechBuffer.match(/[.!?]\s/)) {
+                            speakNextSentence();
+                        }
                     }else if(d.response){
                         if(ft.length===0){speechBuffer+=d.response;hideTyping();
                         if(!document.getElementById('streaming-bubble')){
@@ -677,7 +717,8 @@ async function sendMessage(){
                         setTimeout(()=>{const s=document.getElementById('agent-status');if(s)s.textContent='Idle';},2000);}
                     }
                     if(d.done){
-                        streamFinished=true;speakNextSentence();
+                        streamFinished=true;
+                        // speakNextSentence() moved to finally block
                         if(d.conv_id){currentConv=d.conv_id;localStorage.setItem('lastConvId',currentConv);loadConversations();}
                         if(d.detected_mood&&d.detected_mood!=='neutral'){
                             const me={'stressed':'😰','worried':'😟','sad':'😢','lonely':'😔','angry':'😠','happy':'😊','grateful':'🙏','tired':'😴','confused':'😕','hopeful':'🌟','scared':'😨','crisis':'🆘'};
@@ -688,8 +729,16 @@ async function sendMessage(){
                 }catch(e){}
             }
         }
-    }catch(err){hideTyping();addAIMessage('Error connecting');showToast('⚠️ Connection failed','error');}
-    clearImage();
+    }catch(err){
+        hideTyping();addAIMessage('Error connecting');showToast('⚠️ Connection failed','error');
+    }finally{
+        // Ensure we finish speaking and re-enable input
+        streamFinished=true;
+        speakNextSentence();
+        stopWatchdog();
+        inp.disabled=false; inp.placeholder="Type your message...";
+        clearImage();
+    }
 }
 function showTyping(){
     clearEmptyState();const c=document.getElementById('chat'),d=document.createElement('div');
