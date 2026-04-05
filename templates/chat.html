@@ -829,41 +829,129 @@ function esc(t){const d=document.createElement('div');d.textContent=t;return d.i
 // ===== VOICE INPUT =====
 function toggleVoice(){isListening?stopVoice():startVoice();}
 function startVoice(){
-    console.log("🎙️ Starting...");
+    console.log("🎙️ Attempting to start voice...");
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!SR){showToast('❌ Use Chrome/Edge','error');return;}
-    if(!window.isSecureContext&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1'){showToast('⚠️ Use localhost','error');return;}
-    if(recognition){try{recognition.abort();}catch(e){}recognition=null;}
-    const myRec=new SR();recognition=myRec;myRec.continuous=true;myRec.interimResults=false;myRec.lang='en-US';myRec.maxAlternatives=1;
-    continuousMode=true;if(micResumeInterval)clearInterval(micResumeInterval);
-    myRec.onstart=()=>{isListening=true;updateVoiceUI(true);console.log("✅ Mic active");stopAllSpeech();showToast('🎙️ Listening...','success');};
+    if(!SR){
+        console.error("❌ SpeechRecognition API not available");
+        showToast('❌ Voice not supported. Use Chrome/Edge','error');
+        return;
+    }
+    
+    // Check secure context
+    if(!window.isSecureContext && location.hostname!=='localhost' && location.hostname!=='127.0.0.1'){
+        console.error("❌ Insecure context");
+        showToast('⚠️ Must use http://localhost or http://127.0.0.1','error');
+        return;
+    }
+    
+    // Stop any existing recognition cleanly
+    if(recognition){
+        try{recognition.abort();}catch(e){}
+        recognition=null;
+    }
+    
+    const myRec=new SR();
+    recognition=myRec;
+    myRec.continuous=true;
+    myRec.interimResults=false;
+    myRec.lang='en-US';
+    myRec.maxAlternatives=1;
+    
+    continuousMode=true;
+    if(micResumeInterval)clearInterval(micResumeInterval);
+    
+    myRec.onstart=()=>{
+        console.log("✅ Microphone ACTIVE");
+        isListening=true;
+        updateVoiceUI(true);
+        // Only stop AI speech, don't cancel recognition
+        window.speechSynthesis.cancel();
+        showToast('🎙️ Listening...','success');
+    };
+    
     myRec.onresult=ev=>{
-        const li=ev.results.length-1, txt=ev.results[li][0].transcript, conf=ev.results[li][0].confidence;
-        console.log(`🗣️ "${txt}" (${Math.round(conf*100)}%)`);
-        if(window.speechSynthesis.speaking||window.speechSynthesis.pending){console.log("⏸️ AI speaking");return;}
-        if(Date.now()-lastAiSpeechTime<1200){console.log("⏸️ Echo");return;}
-        if(wakeWordMode){
-            const lt=txt.toLowerCase().trim(); let wf=null,cmd="";
-            for(const w of WAKE_WORDS)if(lt.includes(w)){wf=w;const p=lt.split(w);if(p.length>1)cmd=p[p.length-1].trim();break;}
-            if(wf){console.log(`✅ "${wf}"`);if(cmd.length>2){document.getElementById('input').value=cmd;sendMessage();}
-            else{updateVoiceUI(false);setTimeout(()=>{if(isListening)updateVoiceUI(true);},500);}}
-            else console.log("⏳ Waiting...");return;
+        const li=ev.results.length-1;
+        const txt=ev.results[li][0].transcript;
+        const conf=ev.results[li][0].confidence;
+        console.log(`🗣️ Heard: "${txt}" (${Math.round(conf*100)}%)`);
+        
+        // Echo protection
+        if(window.speechSynthesis.speaking||window.speechSynthesis.pending){
+            console.log("⏸️ Ignoring: AI is speaking");
+            return;
         }
-        if(txt&&txt.trim().length>0){updateVoiceUI(false);setTimeout(()=>{if(isListening)updateVoiceUI(true);},300);document.getElementById('input').value=txt;sendMessage();}
+        if(Date.now()-lastAiSpeechTime<1200){
+            console.log("⏸️ Ignoring: Echo");
+            return;
+        }
+        
+        // Wake word mode
+        if(wakeWordMode){
+            const lt=txt.toLowerCase().trim();
+            let wf=null,cmd="";
+            for(const w of WAKE_WORDS)if(lt.includes(w)){wf=w;const p=lt.split(w);if(p.length>1)cmd=p[p.length-1].trim();break;}
+            if(wf){
+                console.log(`✅ Wake word detected: "${wf}"`);
+                if(cmd.length>2){document.getElementById('input').value=cmd;sendMessage();}
+                else{updateVoiceUI(false);setTimeout(()=>{if(isListening)updateVoiceUI(true);},500);}
+            }
+            return;
+        }
+        
+        // Normal mode
+        if(txt&&txt.trim().length>0){
+            updateVoiceUI(false);
+            setTimeout(()=>{if(isListening)updateVoiceUI(true);},300);
+            document.getElementById('input').value=txt;
+            sendMessage();
+        }
     };
+    
     myRec.onerror=ev=>{
-        console.error("❌",ev.error);
-        if(ev.error==='not-allowed'){showToast('🚫 Mic blocked!','error');stopVoice();}
-        else if(ev.error==='network')setTimeout(()=>{if(continuousMode&&recognition===myRec)restartMic(myRec);},3000);
+        console.error("❌ Mic error:",ev.error);
+        if(ev.error==='not-allowed'){
+            showToast('🚫 Microphone blocked! Click the 🔒 icon in address bar and allow mic access.','error');
+            stopVoice();
+        }else if(ev.error==='network'){
+            console.log("🌐 Network error, will retry...");
+            setTimeout(()=>{if(continuousMode&&recognition===myRec)restartMic(myRec);},3000);
+        }else if(ev.error==='no-speech'){
+            console.log("⏳ No speech detected, continuing to listen...");
+        }else if(ev.error==='aborted'){
+            console.log("⏹️ Recognition aborted");
+        }else{
+            console.log("⚠️ Other error:",ev.error);
+        }
     };
+    
     myRec.onend=()=>{
-        console.log("🛑 Mic ended");if(recognition!==myRec)return;isListening=false;updateVoiceUI(false);
-        if(continuousMode){const ch=setInterval(()=>{
-            if(!continuousMode||recognition!==myRec){clearInterval(ch);return;}
-            if(!window.speechSynthesis.speaking&&!window.speechSynthesis.pending){clearInterval(ch);console.log("✅ Restarting");restartMic(myRec);}
-        },500);}
+        console.log("🛑 Recognition ended");
+        if(recognition!==myRec)return; // Ignore if replaced
+        isListening=false;
+        updateVoiceUI(false);
+        
+        if(continuousMode){
+            console.log("🔄 Continuous mode: waiting for AI silence to restart...");
+            const ch=setInterval(()=>{
+                if(!continuousMode||recognition!==myRec){clearInterval(ch);return;}
+                if(!window.speechSynthesis.speaking&&!window.speechSynthesis.pending){
+                    clearInterval(ch);
+                    console.log("✅ AI silent, restarting mic...");
+                    restartMic(myRec);
+                }
+            },500);
+        }
     };
-    try{isListening=true;myRec.start();}catch(e){console.error("❌",e);isListening=false;updateVoiceUI(false);}
+    
+    try{
+        console.log("🎙️ Starting recognition...");
+        myRec.start();
+    }catch(e){
+        console.error("❌ Failed to start recognition:",e);
+        isListening=false;
+        updateVoiceUI(false);
+        showToast('❌ Failed to start microphone: '+e.message,'error');
+    }
 }
 function restartMic(myRec){if(!continuousMode||recognition!==myRec)return;try{myRec.start();isListening=true;updateVoiceUI(true);}catch(e){startVoice();}}
 function stopVoice(){
