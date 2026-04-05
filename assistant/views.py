@@ -329,6 +329,7 @@ def student_dashboard(request):
     })
 
 
+@csrf_exempt
 def student_api(request):
     """API endpoint for student features."""
     if request.method == 'POST':
@@ -1555,37 +1556,59 @@ def _handle_student_command(message: str) -> dict | None:
     m = (message or "").strip()
     lower = m.lower()
 
-    # Add Subject
-    subject_match = re.search(r"\b(add|create|new)\s+subject\s+(.+)$", lower, flags=re.IGNORECASE)
+    # Add Subject: "add subject Math", "create class Physics"
+    subject_match = re.search(r"\b(add|create|new)\s+(subject|class|course)\s+(.+)$", lower, flags=re.IGNORECASE)
     if subject_match:
-        name = subject_match.group(2).strip()
+        name = subject_match.group(3).strip()
         Subject.objects.get_or_create(name__iexact=name, defaults={'name': name})
         return {"response": f"✅ Subject added: '{name}'.", "action": {"type": "refresh_student"}}
 
-    # Add Assignment
-    assign_match = re.search(r"\b(add|create|new)\s+(assignment|homework|project)\s+(?:for\s+)?(.+?)\s+(?:on\s+|in\s+|about\s+|due\s+|to\s+)?(?:do\s+)?(.+)$", lower, flags=re.IGNORECASE)
-    if assign_match:
-        subj_name = assign_match.group(3).strip()
-        title = assign_match.group(4).strip()
+    # Add Assignment: "add assignment Algebra for Math", "add homework Math"
+    # Try to match "assignment [Title] for [Subject]"
+    assign_match = re.search(r"\b(add|create|new)\s+(assignment|homework|project)\s+(.+?)\s+(?:for|in|of)\s+(.+)$", lower, flags=re.IGNORECASE)
+    # Try to match "add assignment [Title]" (Subject might be implied or missing)
+    if not assign_match:
+        assign_match = re.search(r"\b(add|create|new)\s+(assignment|homework|project)\s+(.+)$", lower, flags=re.IGNORECASE)
         
-        subject = Subject.objects.filter(name__iexact=subj_name).first()
-        if subject:
-            Assignment.objects.create(subject=subject, title=title)
-            return {"response": f"✅ Assignment '{title}' added for {subject.name}.", "action": {"type": "refresh_student"}}
-        else:
-            return {"response": f"Subject '{subj_name}' not found. Please add the subject first."}
+    if assign_match:
+        # Group 3 is usually the title. If we matched the "for Subject" pattern, group 4 is subject.
+        # The first regex: add assignment (.+?) for (.+) -> group 3 is title, group 4 is subject.
+        # The second regex: add assignment (.+) -> group 3 is title.
+        
+        title = assign_match.group(3).strip()
+        subject_name = assign_match.group(4).strip() if assign_match.lastindex and assign_match.lastindex == 4 else ""
+        
+        if not title: return None
+        
+        subject = None
+        if subject_name:
+            subject = Subject.objects.filter(name__iexact=subject_name).first()
+            if not subject:
+                 # Create subject if it doesn't exist? Or return error?
+                 # Let's create it for convenience.
+                 subject, _ = Subject.objects.get_or_create(name__iexact=subject_name, defaults={'name': subject_name})
+
+        if not subject:
+            # If no subject provided and none found, maybe ask user? 
+            # For now, return error or assign to a default if exists?
+            # Or just say "Please specify a subject"
+            return {"response": f"Subject '{subject_name}' not found. Please add it first or say 'add assignment {title} for {subject_name}'."}
+            
+        Assignment.objects.create(subject=subject, title=title)
+        return {"response": f"✅ Assignment '{title}' added for {subject.name}.", "action": {"type": "refresh_student"}}
 
     # Add Exam
     exam_match = re.search(r"\b(add|create|new)\s+(exam|test|quiz)\s+(?:for\s+)?(.+?)\s+(?:on\s+|at\s+|in\s+)?(.+)$", lower, flags=re.IGNORECASE)
     if exam_match:
         subj_name = exam_match.group(3).strip()
+        # Group 4 is the date/time text. We aren't parsing dates well with regex alone, so we just note it.
         date_str = exam_match.group(4).strip()
-        # Attempt to parse date or just store it
+        
         subject = Subject.objects.filter(name__iexact=subj_name).first()
         Exam.objects.create(
             subject=subject,
             title=f"{subj_name} Exam",
-            exam_date=timezone.now() + timezone.timedelta(days=7), # Placeholder date
+            exam_date=timezone.now() + timezone.timedelta(days=7), # Default placeholder
         )
         return {"response": f"📅 Exam added for {subj_name}.", "action": {"type": "refresh_student"}}
 
