@@ -364,7 +364,19 @@ body {
         <div class="input-area">
             <div class="input-container">
                 <input class="input-field" id="input" type="text" placeholder="Type your message or use voice input...">
+                
+                <!-- Camera Input (Hidden) -->
+                <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none">
+                
+                <button class="send-btn" id="camera-btn" onclick="document.getElementById('camera-input').click()" title="Take Photo">📷</button>
                 <button class="send-btn" onclick="sendMessage()">➤</button>
+            </div>
+            <!-- Image Preview Container -->
+            <div id="image-preview" style="display:none; padding: 8px 28px; background: var(--bg-secondary); border-top: 1px solid var(--border-color);">
+                <div style="position:relative; display:inline-block;">
+                    <img id="preview-img" src="" style="height: 60px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <button onclick="clearImage()" style="position:absolute; top:-8px; right:-8px; background:var(--danger); color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; font-size:12px;">×</button>
+                </div>
             </div>
         </div>
     </main>
@@ -1279,6 +1291,27 @@ document.addEventListener('touchend', (e) => {
 
 // --- AUTONOMOUS AGENT MODE ---
 let autonomousMode = false;
+let capturedImage = null; // Stores the Base64 image data
+
+// Camera Handling
+document.getElementById('camera-input').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            capturedImage = e.target.result; // Data URL
+            document.getElementById('preview-img').src = capturedImage;
+            document.getElementById('image-preview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+function clearImage() {
+    capturedImage = null;
+    document.getElementById('camera-input').value = "";
+    document.getElementById('image-preview').style.display = 'none';
+}
 
 // Agent UI
 const agentPanel = document.createElement('div');
@@ -1328,6 +1361,9 @@ sendMessage = async function() {
             try {
                 let body = JSON.parse(opts.body);
                 body.autonomous = autonomousMode;
+                if (capturedImage) {
+                    body.image = capturedImage;
+                }
                 opts.body = JSON.stringify(body);
             } catch(e) {}
         }
@@ -1336,6 +1372,9 @@ sendMessage = async function() {
     
     await originalSendMessage();
     window.fetch = originalFetch;
+    
+    // Clear image after sending
+    clearImage();
 };
 
 // Extend stream parser to handle agent logs

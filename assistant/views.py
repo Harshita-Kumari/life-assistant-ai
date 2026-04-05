@@ -3136,6 +3136,7 @@ def chat_stream_api(request):
 
     # Handle Autonomous Mode
     autonomous = payload.get("autonomous", False)
+    image_data = payload.get("image") # Base64 Data URL
     
     # Inject agent mode into system prompt
     messages = [{"role": "system", "content": _system_prompt(autonomous=autonomous)}]
@@ -3245,11 +3246,28 @@ def chat_stream_api(request):
     messages.append({"role": "system", "content": _mood_response_guidance(detected_mood, mood_intensity)})
     if personal_memory_lines:
         messages.append({"role": "system", "content": "Known user memory:\n- " + "\n- ".join(personal_memory_lines)})
-    
+
     for row in history_rows:
         messages.append({"role": "user", "content": row["message"]})
         messages.append({"role": "assistant", "content": row["response"]})
-    messages.append({"role": "user", "content": user_message})
+    
+    # Add current user message (with image support if present)
+    # Note: We need to access image_data which is defined higher up in the function scope.
+    # However, looking at the code flow, image_data is only available in the outer scope if defined there.
+    # Let's ensure we are passing it correctly.
+    # In the current flow of chat_stream_api, image_data is defined at ~line 3139.
+    # We need to retrieve it here. Let's assume it's passed or available.
+    # Actually, I should modify the payload construction logic here to be aware of image_data.
+    # Since this is a stream function, I'll use the variable from the outer scope.
+    
+    if image_data:
+        user_content = [
+            {"type": "text", "text": user_message},
+            {"type": "image_url", "image_url": {"url": image_data}}
+        ]
+        messages.append({"role": "user", "content": user_content})
+    else:
+        messages.append({"role": "user", "content": user_message})
 
     temp = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
     if detected_mood == "crisis":
